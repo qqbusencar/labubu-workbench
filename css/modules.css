@@ -1532,6 +1532,17 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.85);
 }
+/* 健身模块专属：Kitty 略缩小并靠右下，上/左留白（不影响其他模块） */
+.kitty-feature-card.fitness-card .kitty-portrait {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+.kitty-feature-card.fitness-card .kitty-portrait .kitty-img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
 .kitty-feature-card .lfc-text { flex: 1; min-width: 0; }
 .kitty-feature-card .lfc-title {
   font-size: 16px;

@@ -55,8 +55,8 @@ const Fitness = {
           `
         })}
 
-        <div class="kitty-feature-card" style="margin-bottom:16px">
-          <div class="kitty-portrait" style="background:linear-gradient(135deg,#c8e6c9,#b8d8e8)">${Utils.kittyImg({ size: 'small', scene: 'scooter' })}</div>
+        <div class="kitty-feature-card fitness-card" style="margin-bottom:16px">
+          <div class="kitty-portrait" style="background:linear-gradient(135deg,#c8e6c9,#b8d8e8)">${Utils.kittyImg({ size: 'small', module: 'fitness' })}</div>
           <div class="lfc-text">
             <div class="lfc-title">🏃‍♀️ 一起动起来吧</div>
             <div class="lfc-sub">${streak >= 7 ? `已坚持 ${streak} 天，太棒啦！` : streak > 0 ? `已连续 ${streak} 天，继续加油哦` : '今天就开始你的第一个运动项目吧～'}</div>
