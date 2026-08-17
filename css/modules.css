@@ -1515,12 +1515,12 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
 }
 .kitty-feature-card .kitty-portrait {
   flex-shrink: 0;
-  width: 84px;
-  height: 84px;
-  border-radius: 16px;
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.55);
-  padding: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 6px;
   box-shadow: 0 6px 14px rgba(180, 151, 214, 0.3);
   transform: rotate(-2deg);
 }
@@ -1530,6 +1530,7 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   object-fit: contain;
   object-position: center;
   border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
 }
 .kitty-feature-card .lfc-text { flex: 1; min-width: 0; }
 .kitty-feature-card .lfc-title {
@@ -1581,7 +1582,7 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
     width: 100px; height: 100px;
   }
   .kitty-feature-card .kitty-portrait {
-    width: 72px; height: 72px;
+    width: 84px; height: 84px;
   }
   .floating-kitty { width: 52px; height: 52px; }
   .lock-kitty.is-img { width: 160px; height: 160px; }
