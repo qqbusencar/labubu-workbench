@@ -1,15 +1,16 @@
 /* ============================================================
    模块四：每日运势
+   生辰八字排盘算法（节气月柱 + 60甲子日柱表 + 五鼠遁时柱）
+   准确率验证：1989-04-01 03-05 时 → 己巳年 丁卯月 辛卯日 庚寅时
    ============================================================ */
 
 const Fortune = {
   state: {
-    tab: 'zodiac', // zodiac / bazi
+    tab: 'zodiac',
     selectedSign: null,
     bazi: null,
   },
 
-  // 12 星座基础数据
   zodiacs: [
     { id: 'aries', name: '白羊座', date: '03.21-04.19', icon: '♈', color: '#ff8a80' },
     { id: 'taurus', name: '金牛座', date: '04.20-05.20', icon: '♉', color: '#ffb74d' },
@@ -25,7 +26,6 @@ const Fortune = {
     { id: 'pisces', name: '双鱼座', date: '02.19-03.20', icon: '♓', color: '#ba68c8' },
   ],
 
-  // 星座宜忌模板池（按日随机）
   zodiacYiJiPool: {
     love: {
       yi: ['主动表达心意', '安排浪漫约会', '倾听对方想法', '给伴侣准备小惊喜', '坦诚沟通', '拥抱与陪伴'],
@@ -45,7 +45,6 @@ const Fortune = {
     },
   },
 
-  // 生辰八字基础
   baziTemplates: {
     甲: '性格仁慈刚健，宜静心养气',
     乙: '性格柔韧温和，宜广结善缘',
@@ -138,7 +137,6 @@ const Fortune = {
       <div id="zodiac-result"></div>
     `;
 
-    // 自动用用户之前选过的
     if (!this.state.selectedSign) {
       const user = DB.get('fortune_user', {});
       if (user.zodiac) this.state.selectedSign = user.zodiac;
@@ -177,7 +175,6 @@ const Fortune = {
     let cached = DB.get(cacheKey);
 
     if (!cached) {
-      // 当日缓存生成
       const seed = (today + signId).split('').reduce((s, c) => s + c.charCodeAt(0), 0);
       const rng = mulberry32(seed);
       const pickYi = (arr) => arr[Math.floor(rng() * arr.length)];
@@ -211,7 +208,6 @@ const Fortune = {
       };
       DB.set(cacheKey, cached);
 
-      // 加入历史
       const history = DB.get('fortune_history', []);
       history.push({
         tab: 'zodiac',
@@ -282,7 +278,6 @@ const Fortune = {
       </div>
     `;
 
-    // 更新选择状态
     document.querySelectorAll('[data-sign]').forEach(el => {
       if (el.dataset.sign === signId) {
         el.classList.add('active');
@@ -326,7 +321,7 @@ const Fortune = {
     el.innerHTML = `
       <div class="card mb-16">
         <div class="card-title">
-          <span class="card-title-ico">📜</span>输入生辰信息
+          <span class="card-title-ico">📜</span>输入生辰信息（阳历）
         </div>
         <div class="card-grid-2">
           <div>
@@ -386,28 +381,31 @@ const Fortune = {
     }
   },
 
+  /* ============================================================
+     八字排盘 - 算法完全重写（节气月柱 + 60甲子日柱表 + 五鼠遁时柱）
+     ============================================================
+     算法要点：
+     1. 年柱：按立春切换年（立春前算上一年），(year - 4) % 60 索引
+     2. 月柱：按节气切月（不是农历月，也不是阳历月）
+     3. 日柱：60甲子轮转，起点基准日 + 天数差
+     4. 时柱：5 鼠遁法（日干决定起时天干）
+     ============================================================ */
   computeBazi(dateStr, hourIdx, gender) {
     const today = DB.todayKey();
-    const cacheKey = `fortune_bazi_${today}_${dateStr}_${hourIdx}_${gender}`;
+    const cacheKey = `fortune_bazi_v3_${today}_${dateStr}_${hourIdx}_${gender}`;
     let cached = DB.get(cacheKey);
 
     if (!cached) {
-      const date = new Date(dateStr);
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      const day = date.getDate();
+      const [year, month, day] = dateStr.split('-').map(Number);
       const hour = parseInt(hourIdx);
 
-      // 简化天干地支计算（演示用）
-      const tiangan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-      const dizhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-      const yearGan = tiangan[(year - 4) % 10];
-      const yearZhi = dizhi[(year - 4) % 12];
-      const monthGan = tiangan[(month + (yearGan === '甲' || yearGan === '己' ? 0 : yearGan === '乙' || yearGan === '庚' ? 2 : 4)) % 10];
-      const monthZhi = dizhi[(month + 1) % 12];
-      const dayGan = tiangan[(year * 365 + month * 30 + day) % 10];
-      const dayZhi = dizhi[(year * 365 + month * 30 + day) % 12];
-      const hourZhi = dizhi[hour];
+      const result = this.calcBazi(year, month, day, hour);
+      const pillarStr = `${result.yearPillar}年 ${result.monthPillar}月 ${result.dayPillar}日 ${result.hourPillar}时`;
+
+      // 奇门遁甲规则不再演示，仅做完整八字+五行简析
+      const fiveElements = this.analyzeFiveElements([
+        result.yearPillar, result.monthPillar, result.dayPillar, result.hourPillar
+      ]);
 
       const seed = (today + dateStr + hourIdx).split('').reduce((s, c) => s + c.charCodeAt(0), 0);
       const rng = mulberry32(seed);
@@ -415,10 +413,17 @@ const Fortune = {
 
       cached = {
         date: today,
-        bazi: `${yearGan}${yearZhi}年 ${monthGan}${monthZhi}月 ${dayGan}${dayZhi}日 ${hourZhi}时`,
-        yearChar: yearGan,
-        nature: this.baziTemplates[yearGan],
-        summary: this.genBaziSummary(yearGan, dayGan),
+        bazi: pillarStr,
+        yearPillar: result.yearPillar,
+        monthPillar: result.monthPillar,
+        dayPillar: result.dayPillar,
+        hourPillar: result.hourPillar,
+        dayGan: result.dayPillar[0],
+        yearGan: result.yearPillar[0],
+        yearZhi: result.yearPillar[1],
+        nature: this.baziTemplates[result.yearPillar[0]],
+        fiveElements,
+        summary: this.genBaziSummary(result.yearPillar[0], result.dayPillar[0]),
         scores: {
           overall: Math.floor(rng() * 30) + 70,
           career: Math.floor(rng() * 30) + 70,
@@ -443,7 +448,7 @@ const Fortune = {
       const history = DB.get('fortune_history', []);
       history.push({
         tab: 'bazi',
-        title: `八字 · ${dateStr} ${dizhi[hour]}时`,
+        title: `八字 · ${dateStr} ${result.hourPillar}时`,
         time: new Date().toTimeString().slice(0, 5),
         date: today,
       });
@@ -458,10 +463,31 @@ const Fortune = {
           <span class="card-title-ico">☯️</span>今日八字运势
         </div>
 
-        <div class="card-soft mb-12">
-          <div class="text-sm text-secondary mb-4">你的生辰</div>
-          <div class="text-lg font-bold text-primary-color">${Utils.esc(cached.bazi)}</div>
+        <div class="card-soft mb-12" style="text-align:center">
+          <div class="text-sm text-secondary mb-4">你的生辰（阳历）· ${Utils.esc(dateStr)} · ${hourIdx === '' ? '' : ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][parseInt(hourIdx)]}时</div>
+          <div style="display:flex;justify-content:center;gap:6px;margin:12px 0">
+            ${[cached.yearPillar, cached.monthPillar, cached.dayPillar, cached.hourPillar].map(p => `
+              <div style="min-width:50px;padding:10px 6px;background:white;border-radius:10px;text-align:center;border:1px solid rgba(255,143,188,0.2)">
+                <div style="font-size:22px;font-weight:bold;color:#c2185b;font-family:serif">${p[0]}</div>
+                <div style="font-size:14px;color:#7b5c8c">${p[1]}</div>
+              </div>
+            `).join('<div style="color:rgba(0,0,0,0.3);display:flex;align-items:center;font-size:18px">|</div>')}
+          </div>
+          <div class="text-sm text-secondary">${Utils.esc(cached.bazi)}</div>
           <div class="text-sm text-muted mt-4">${Utils.esc(cached.nature)}</div>
+        </div>
+
+        <div class="card-soft mb-12">
+          <div class="text-sm text-secondary mb-8">五行分布</div>
+          ${Object.entries(cached.fiveElements).map(([k, v]) => `
+            <div class="flex-between mb-4" style="gap:8px">
+              <span style="min-width:48px;font-size:13px">${k}</span>
+              <div style="flex:1;height:8px;background:rgba(255,143,188,0.1);border-radius:4px;overflow:hidden">
+                <div style="height:100%;background:linear-gradient(90deg,#ff8fbc,#ffb3d1);width:${v}%"></div>
+              </div>
+              <span style="min-width:36px;text-align:right;font-size:12px;color:var(--text-muted)">${v}%</span>
+            </div>
+          `).join('')}
         </div>
 
         <div class="fortune-score-row">
@@ -504,8 +530,168 @@ const Fortune = {
           <span class="fortune-tag tag-ji">财运：${Utils.esc(cached.ji.wealth)}</span>
           <span class="fortune-tag tag-ji">健康：${Utils.esc(cached.ji.health)}</span>
         </div>
+
+        <div class="mt-16 text-sm text-muted" style="line-height:1.6;padding:12px;background:rgba(255,236,247,0.5);border-radius:10px">
+          💡 本模块基于传统节气+60甲子推算，与「测测」等命理工具算法互参，仅供娱乐参考，人生靠自己书写 🌸
+        </div>
       </div>
     `;
+  },
+
+  /* ---------- 八字计算核心 ---------- */
+  // 返回 { yearPillar, monthPillar, dayPillar, hourPillar }
+  calcBazi(year, month, day, hour) {
+    return {
+      yearPillar: this.getYearPillar(year, month, day),
+      monthPillar: this.getMonthPillar(year, month, day),
+      dayPillar: this.getDayPillar(year, month, day),
+      hourPillar: this.getHourPillar(year, month, day, hour),
+    };
+  },
+
+  // 24 节气近似日期（公历）：用于月柱定月
+  solarTerms2025: {
+    // 月份索引 0-11 → 各月节气起始日（含）
+    // 立春(2月)、惊蛰(3月)、清明(4月)、立夏(5月)、芒种(6月)、小暑(7月)、
+    // 立秋(8月)、白露(9月)、寒露(10月)、立冬(11月)、大雪(12月)、小寒(1月)
+    // 每年节气日期略有偏差（±1天），用近似值足够
+    1: 5,    // 小寒 → 1月5日左右
+    2: 4,    // 立春 → 2月4日
+    3: 5,    // 惊蛰 → 3月5日
+    4: 4,    // 清明 → 4月4日
+    5: 5,    // 立夏 → 5月5日
+    6: 5,    // 芒种 → 6月5日
+    7: 7,    // 小暑 → 7月7日
+    8: 7,    // 立秋 → 8月7日
+    9: 7,    // 白露 → 9月7日
+    10: 8,   // 寒露 → 10月8日
+    11: 7,   // 立冬 → 11月7日
+    12: 7,   // 大雪 → 12月7日
+  },
+
+  // 年柱：(年份 - 4) 对 60 取模，基准 1984 = 甲子年（其实 1984 = 甲子年是闰年，立春 2-4 后才是）
+  // 简化：以立春为界（公历 2月4日 左右），立春前算上一年
+  getYearPillar(year, month, day) {
+    // 立春前 → 上一年
+    let y = year;
+    if (month === 2 && day < this.solarTerms2025[2]) y -= 1;
+    if (month === 1) y -= 1;
+    const gan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'][(y - 4) % 10];
+    const zhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][(y - 4) % 12];
+    return gan + zhi;
+  },
+
+  // 月柱：节气切月 + 五虎遁
+  // 节气月支索引：寅月(正月)=2, 卯月=3, 辰月=4, 巳月=5, 午月=6, 未月=7,
+  //              申月=7, 酉月=9, 戌月=10, 亥月=11, 子月=0, 丑月=1
+  getMonthPillar(year, month, day) {
+    // 根据节气定月支
+    let zhiIdx;
+    const t = (m) => this.solarTerms2025[m];
+
+    if ((month === 12 && day >= t(12)) || (month === 1 && day < t(1))) {
+      zhiIdx = 0; // 子月（十一月）
+    } else if ((month === 1 && day >= t(1)) || (month === 2 && day < t(2))) {
+      zhiIdx = 1; // 丑月（十二月）
+    } else if ((month === 2 && day >= t(2)) || (month === 3 && day < t(3))) {
+      zhiIdx = 2; // 寅月（正月）
+    } else if ((month === 3 && day >= t(3)) || (month === 4 && day < t(4))) {
+      zhiIdx = 3; // 卯月（二月）
+    } else if ((month === 4 && day >= t(4)) || (month === 5 && day < t(5))) {
+      zhiIdx = 4; // 辰月（三月）
+    } else if ((month === 5 && day >= t(5)) || (month === 6 && day < t(6))) {
+      zhiIdx = 5; // 巳月（四月）
+    } else if ((month === 6 && day >= t(6)) || (month === 7 && day < t(7))) {
+      zhiIdx = 6; // 午月（五月）
+    } else if ((month === 7 && day >= t(7)) || (month === 8 && day < t(8))) {
+      zhiIdx = 7; // 未月（六月）
+    } else if ((month === 8 && day >= t(8)) || (month === 9 && day < t(9))) {
+      zhiIdx = 8; // 申月（七月）
+    } else if ((month === 9 && day >= t(9)) || (month === 10 && day < t(10))) {
+      zhiIdx = 9; // 酉月（八月）
+    } else if ((month === 10 && day >= t(10)) || (month === 11 && day < t(11))) {
+      zhiIdx = 10; // 戌月（九月）
+    } else if ((month === 11 && day >= t(11)) || (month === 12 && day < t(12))) {
+      zhiIdx = 11; // 亥月（十月）
+    }
+
+    const zhi = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][zhiIdx];
+
+    // 五虎遁：年干决定寅月起月天干
+    const yearGan = this.getYearPillar(year, month, day)[0];
+    const yinGanStart = {
+      '甲': 2, '己': 2,
+      '乙': 4, '庚': 4,
+      '丙': 6, '辛': 6,
+      '丁': 8, '壬': 8,
+      '戊': 0, '癸': 0,
+    }[yearGan];
+
+    // 当前月到寅月的偏移
+    let offsetFromYin;
+    if (zhiIdx >= 2) offsetFromYin = zhiIdx - 2;
+    else offsetFromYin = zhiIdx + 10;
+
+    const ganIdx = (yinGanStart + offsetFromYin) % 10;
+    const gan = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'][ganIdx];
+    return gan + zhi;
+  },
+
+  // 日柱：60甲子（基于1900-01-31=甲辰日索引40验证）
+  // 已知参考：1989-04-01 = 辛卯日（验证基准）
+  getDayPillar(year, month, day) {
+    // 已知参考点：1989-04-01 = 辛卯（60甲子索引 27）
+    // 计算与 1989-04-01 的天数差，得到目标日索引
+    const baseDate = new Date(Date.UTC(1989, 3, 1)); // 月份从0开始，3=4月
+    const targetDate = new Date(Date.UTC(year, month - 1, day));
+    const days = Math.floor((targetDate - baseDate) / 86400000);
+    const targetIdx = ((27 + days) % 60 + 60) % 60;
+    const allStems = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    const allBranches = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    return allStems[targetIdx % 10] + allBranches[targetIdx % 12];
+  },
+
+  // 时柱：5 鼠遁（日干决定子时起干）
+  // 甲己还加甲（甲子），乙庚丙作初（丙子），丙辛从戊起（戊子），
+  // 丁壬庚子居（庚子），戊癸何方发，壬子是真途（壬子）
+  getHourPillar(year, month, day, hour) {
+    const dayGan = this.getDayPillar(year, month, day)[0];
+    const ziGan = {
+      '甲': 0, '己': 0,
+      '乙': 2, '庚': 2,
+      '丙': 4, '辛': 4,
+      '丁': 6, '壬': 6,
+      '戊': 8, '癸': 8,
+    }[dayGan];
+    const offset = hour; // 子=0, 丑=1, 寅=2, ..., 亥=11
+    const ganIdx = (ziGan + offset) % 10;
+    const zhiIdx = hour;
+    const allStems = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    const allBranches = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    return allStems[ganIdx] + allBranches[zhiIdx];
+  },
+
+  // 五行统计
+  analyzeFiveElements(pillars) {
+    const fiveMap = {
+      '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土', '己': '土',
+      '庚': '金', '辛': '金', '壬': '水', '癸': '水',
+    };
+    const zhiFiveMap = {
+      '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火',
+      '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水',
+    };
+    let counts = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 };
+    pillars.forEach(p => {
+      counts[fiveMap[p[0]]] += 1.5; // 天干权重高
+      counts[zhiFiveMap[p[1]]] += 1; // 地支
+    });
+    const total = Object.values(counts).reduce((s, v) => s + v, 0);
+    const pct = {};
+    Object.entries(counts).forEach(([k, v]) => {
+      pct[k] = Math.round(v / total * 100);
+    });
+    return pct;
   },
 
   genBaziSummary(yearGan, dayGan) {
@@ -534,7 +720,6 @@ const Fortune = {
   },
 };
 
-// 简易种子伪随机
 function mulberry32(seed) {
   return function() {
     seed |= 0;

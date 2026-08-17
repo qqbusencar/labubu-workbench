@@ -253,33 +253,88 @@ const Utils = {
     setTimeout(() => burst.remove(), 1100);
   },
 
-  // 真实拉布布图片（草帽粉衣版本）
+  // 真实拉布布图片（草帽粉衣版本）- 兼容保留，重定向到 Kitty
   labubuImg(opts = {}) {
-    const {
-      size = 'medium', // tiny / small / thumb / medium / card / header / hero
-      className = '',
-      alt = 'Labubu 治愈立绘',
-      loading = 'lazy',
-      src = null, // 覆盖
-    } = opts;
-    const srcMap = {
-      tiny: 'assets/img/labubu-tiny.png',
-      small: 'assets/img/labubu-small.png',
-      thumb: 'assets/img/labubu-thumb.png',
-      medium: 'assets/img/labubu-medium.png',
-      card: 'assets/img/labubu-card.png',
-      header: 'assets/img/labubu-header.png',
-      hero: 'assets/img/labubu-hero.webp',
-    };
-    const url = src || srcMap[size] || srcMap.medium;
-    return `<img class="labubu-img labubu-${size} ${className}" src="${url}" alt="${this.esc(alt)}" loading="${loading}" decoding="async" />`;
+    return this.kittyImg({ ...opts, module: opts.module || 'default' });
   },
 
-  // 拉布布头像（圆角剪裁）
-  labubuAvatar({ size = 64, ring = false } = {}) {
-    return `<div class="labubu-avatar${ring ? ' ring' : ''}" style="width:${size}px;height:${size}px">
-      ${this.labubuImg({ size: 'tiny', className: 'labubu-avatar-img' })}
+  // 拉布布头像（圆角剪裁）- 兼容保留
+  labubuAvatar(opts = {}) {
+    return this.kittyAvatar(opts);
+  },
+
+  // ============================================================
+  // Hello Kitty 治愈立绘 - 按模块选择最贴切的场景
+  // ============================================================
+  // 模块 → 场景映射
+  KITTY_MODULES: {
+    fitness:  { main: 'bike',         alt: 'bike',         backup: 'airplane' },
+    wellness: { main: 'tea',          alt: 'tea',          backup: 'cloud-sleep' },
+    study:    { main: 'book',         alt: 'book',         backup: 'notebook' },
+    fortune:  { main: 'star-sleep',   alt: 'star-sleep',   backup: 'snowglobe-pink' },
+    news:     { main: 'cart',         alt: 'cart',         backup: 'bag-pink' },
+    default:  { main: 'picnic',       alt: 'picnic',       backup: 'bag-pink' },
+  },
+
+  // 通用 SVG 加载中插画（Hello Kitty 茶话会）
+  kittyLoadingSvg(size = 80) {
+    return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="40" fill="#ffe4f1" stroke="#ff8fbc" stroke-width="2" opacity="0.3">
+        <animate attributeName="r" values="40;45;40" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="50" cy="40" r="18" fill="#fff"/>
+      <polygon points="38,28 42,18 46,28" fill="#ff8fbc"/>
+      <polygon points="54,28 58,18 62,28" fill="#ff8fbc"/>
+      <circle cx="44" cy="42" r="2" fill="#222"/>
+      <circle cx="56" cy="42" r="2" fill="#222"/>
+      <ellipse cx="50" cy="50" rx="3" ry="2" fill="#ff6fa3"/>
+      <path d="M30 70 Q50 80 70 70 L70 90 L30 90 Z" fill="#ff8fbc"/>
+      <circle cx="50" cy="50" r="2" fill="#fff" opacity="0.8">
+        <animate attributeName="opacity" values="0.8;0.2;0.8" dur="1.2s" repeatCount="indefinite"/>
+      </circle>
+    </svg>`;
+  },
+
+  // 渲染 Hello Kitty 立绘（按模块或指定场景）
+  kittyImg(opts = {}) {
+    const {
+      size = 'medium',   // tiny / small / thumb / medium / card / header / hero
+      module = null,     // fitness / wellness / study / fortune / news
+      scene = null,      // 显式指定场景名（如 'bike'、'tea'），优先级最高
+      backup = false,    // 使用模块的备用场景
+      className = '',
+      alt = 'Hello Kitty 治愈立绘',
+      loading = 'lazy',
+    } = opts;
+    let sceneName = scene;
+    if (!sceneName && module && this.KITTY_MODULES[module]) {
+      sceneName = backup ? this.KITTY_MODULES[module].backup : this.KITTY_MODULES[module].main;
+    }
+    if (!sceneName) sceneName = this.KITTY_MODULES.default.main;
+    const srcMap = {
+      tiny:   `assets/img/kitty/kitty-${sceneName}-tiny.png`,
+      small:  `assets/img/kitty/kitty-${sceneName}-small.png`,
+      thumb:  `assets/img/kitty/kitty-${sceneName}-thumb.png`,
+      medium: `assets/img/kitty/kitty-${sceneName}-medium.png`,
+      card:   `assets/img/kitty/kitty-${sceneName}-card.png`,
+      header: `assets/img/kitty/kitty-${sceneName}-header.png`,
+      hero:   `assets/img/kitty/kitty-${sceneName}-hero.webp`,
+    };
+    const url = srcMap[size] || srcMap.medium;
+    return `<img class="kitty-img kitty-${size} ${className}" src="${url}" alt="${this.esc(alt)}" loading="${loading}" decoding="async" />`;
+  },
+
+  // Hello Kitty 头像（圆角剪裁，按模块选场景）
+  kittyAvatar(opts = {}) {
+    const { size = 64, ring = false, module = null, scene = null } = opts;
+    return `<div class="kitty-avatar${ring ? ' ring' : ''}" style="width:${size}px;height:${size}px">
+      ${this.kittyImg({ size: 'tiny', module, scene, className: 'kitty-avatar-img' })}
     </div>`;
+  },
+
+  // 根据模块名返回侧栏/底部按钮图标（小尺寸头像）
+  kittyIcon(module, size = 40) {
+    return this.kittyAvatar({ size, module });
   },
 };
 

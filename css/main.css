@@ -1,5 +1,5 @@
 /* ============================================================
-   Labubu 治愈工作台 — 主样式
+   Hello Kitty 治愈工作台 — 主样式
    主色：奶油白 / 浅紫藤紫 / 柔粉 / 马卡龙
    ============================================================ */
 
@@ -228,7 +228,7 @@ body {
   100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-.lock-labubu {
+.lock-kitty {
   width: 120px;
   height: 132px;
   margin: 0 auto 16px;
@@ -1009,3 +1009,301 @@ body {
   border-radius: var(--radius-pill);
 }
 .app-main::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+/* ============================================================
+   同步状态徽章
+   ============================================================ */
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.sync-badge .sync-ico { font-size: 12px; }
+
+.sync-disabled {
+  background: rgba(158, 158, 158, 0.15);
+  color: #757575;
+}
+.sync-guest {
+  background: rgba(255, 143, 188, 0.15);
+  color: #c2185b;
+}
+.sync-idle, .sync-success {
+  background: rgba(165, 214, 167, 0.25);
+  color: #2e7d32;
+}
+.sync-syncing {
+  background: rgba(100, 181, 246, 0.2);
+  color: #1565c0;
+  animation: sync-pulse 1.2s ease-in-out infinite;
+}
+.sync-error {
+  background: rgba(244, 67, 54, 0.15);
+  color: #c62828;
+}
+.sync-offline {
+  background: rgba(158, 158, 158, 0.2);
+  color: #616161;
+}
+
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ============================================================
+   Hello Kitty 侧栏 / 底部按钮头像
+   ============================================================ */
+.pc-nav-item .nav-ico img,
+.bottom-nav-item .bottom-ico img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 2px;
+  box-shadow: 0 2px 6px rgba(255, 143, 188, 0.15);
+  transition: transform 0.2s;
+}
+.pc-nav-item:hover .nav-ico img,
+.bottom-nav-item:hover .bottom-ico img,
+.pc-nav-item.active .nav-ico img,
+.bottom-nav-item.active .bottom-ico img {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.95);
+}
+.pc-nav-item .nav-ico,
+.bottom-nav-item .bottom-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+/* ============================================================
+   Hello Kitty 立绘 (替换 labubu 立绘的视觉风格)
+   ============================================================ */
+.kitty-img {
+  display: block;
+  object-fit: contain;
+}
+.kitty-tiny { width: 40px; height: 40px; border-radius: 8px; }
+.kitty-small { width: 84px; height: 84px; border-radius: 14px; }
+.kitty-thumb { width: 112px; height: 112px; border-radius: 16px; }
+.kitty-medium { width: 160px; height: 160px; border-radius: 18px; }
+.kitty-card { width: 220px; height: 220px; border-radius: 20px; }
+.kitty-header { width: 300px; height: 300px; border-radius: 22px; }
+.kitty-hero { width: 100%; max-width: 460px; height: auto; aspect-ratio: 1/1; border-radius: 24px; }
+
+.kitty-avatar {
+  position: relative;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(255, 143, 188, 0.2);
+}
+.kitty-avatar.ring {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--primary, #ff8fbc);
+}
+.kitty-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+
+.module-banner-art .kitty-img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 4px;
+  animation: kitty-sway 4s ease-in-out infinite;
+}
+
+.empty-kitty {
+  width: 96px;
+  height: 96px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+.empty-kitty .kitty-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.empty-kitty-hero {
+  text-align: center;
+  padding: 28px 16px;
+  background: linear-gradient(135deg, rgba(255, 235, 245, 0.5), rgba(255, 220, 235, 0.3));
+  border-radius: 18px;
+  border: 1px dashed rgba(255, 143, 188, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+.empty-kitty-hero::before {
+  content: '🌸';
+  position: absolute;
+  top: -8px;
+  left: 8px;
+  font-size: 24px;
+  opacity: 0.4;
+}
+.empty-kitty-hero::after {
+  content: '✨';
+  position: absolute;
+  bottom: -4px;
+  right: 12px;
+  font-size: 22px;
+  opacity: 0.4;
+}
+.empty-kitty-hero .kitty-portrait {
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+.empty-kitty-hero .kitty-portrait .kitty-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.empty-kitty-hero .empty-title { position: relative; z-index: 1; }
+.empty-kitty-hero .empty-sub { position: relative; z-index: 1; }
+
+.lock-kitty.is-img {
+  width: 200px;
+  height: 200px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  box-shadow: 0 8px 32px rgba(255, 143, 188, 0.25);
+  animation: kitty-sway 4s ease-in-out infinite;
+}
+.lock-kitty.is-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.kitty-feature-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 143, 188, 0.15);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(255, 143, 188, 0.08);
+}
+.kitty-feature-card::before {
+  content: '🌸';
+  position: absolute;
+  top: -6px;
+  right: 8px;
+  font-size: 20px;
+  opacity: 0.2;
+}
+.kitty-feature-card .kitty-portrait {
+  flex-shrink: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffe4f1, #fff0e0);
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kitty-feature-card .kitty-portrait .kitty-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.kitty-feature-card .lfc-text { flex: 1; min-width: 0; }
+.kitty-feature-card .lfc-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  margin-bottom: 4px;
+}
+.kitty-feature-card .lfc-sub {
+  font-size: 12px;
+  color: var(--text-muted, #888);
+  line-height: 1.5;
+}
+
+.floating-kitty {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 4px;
+  animation: kitty-sway 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+.floating-kitty .kitty-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 移动端底部 Kitty 头像大小 */
+@media (max-width: 900px) {
+  .bottom-nav-item .bottom-ico img {
+    width: 32px;
+    height: 32px;
+  }
+  .bottom-nav-item .bottom-ico {
+    width: 44px;
+    height: 44px;
+  }
+  .pc-brand-logo.is-img img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+  .mobile-avatar.is-img img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+  }
+  .lock-kitty.is-img { width: 160px; height: 160px; }
+}
+
+/* Kitty 摇摆动画 */
+@keyframes kitty-sway {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50% { transform: rotate(2deg) translateY(-4px); }
+}
+.kitty-stand { animation: kitty-sway 4s ease-in-out infinite; }
+.kitty-wrap { display: inline-block; }

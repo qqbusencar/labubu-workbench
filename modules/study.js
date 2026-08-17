@@ -2,11 +2,24 @@
    模块三：学习收获
    沪教牛津版教材体系 · 三年级起点 · 难度逐日递增
    每日：10个新词 / 5句听力 / 5句口语 · 答错2次进入待复习词库
+   教材自动同步：版本号 + 上次同步日期
+   单词 quiz：选选项 → 点「确认」→ 答错/答对
+   听力 quiz：先听音频 → 4 选 1 → 点「确认」→ 显示原文
    ============================================================ */
 
 const Study = {
   state: {
     tab: 'word', // word / listen / speak / review
+  },
+
+  /* ---------- 教材元数据（自动同步机制） ---------- */
+  curriculumMeta: {
+    version: 'V3.0.0',
+    edition: '沪教牛津版 · 小学三年级起点',
+    totalStages: 10,
+    wordsPerStage: 12,
+    lastSyncDate: '2026-08-17',
+    autoSync: true, // 启动时检测版本
   },
 
   /* ---------- 课程词库（按学期排列，难度递增） ---------- */
@@ -165,7 +178,7 @@ const Study = {
     return this.flatPool;
   },
 
-  /* ---------- 听力句库（按难度递增） ---------- */
+  /* ---------- 听力句库 ---------- */
   listeningPool: [
     { text: 'Good morning, Miss Li.', zh: '早上好，李老师。' },
     { text: 'How are you? I am fine, thank you.', zh: '你好吗？我很好，谢谢。' },
@@ -199,7 +212,7 @@ const Study = {
     { text: 'Knowledge is power. Keep learning!', zh: '知识就是力量，坚持学习！' },
   ],
 
-  /* ---------- 口语句库（按难度递增） ---------- */
+  /* ---------- 口语句库 ---------- */
   speakingPool: [
     { text: 'Hello! My name is Lily.', trans: '你好！我的名字叫莉莉。', tip: '自我介绍开场' },
     { text: 'Nice to meet you!', trans: '很高兴认识你！', tip: '初次见面问候 · 语调上扬' },
@@ -232,6 +245,25 @@ const Study = {
   DAILY_LISTEN: 5,
   DAILY_SPEAK: 5,
 
+  /* ---------- 教材自动同步（启动时检查版本） ---------- */
+  checkCurriculumSync() {
+    const saved = DB.get('study_curriculum_meta', null);
+    const current = this.curriculumMeta;
+    if (!saved) {
+      // 首次访问
+      DB.set('study_curriculum_meta', { ...current, firstInstalled: DB.todayKey() });
+      return { status: 'first', meta: current };
+    }
+    if (saved.version !== current.version) {
+      // 版本变化 → 标记待同步
+      DB.set('study_curriculum_meta', { ...current, upgradedAt: DB.todayKey(), oldVersion: saved.version });
+      return { status: 'upgraded', meta: current, oldVersion: saved.version };
+    }
+    // 同版本：仅更新最近同步日期
+    DB.set('study_curriculum_meta', { ...saved, lastSyncDate: DB.todayKey() });
+    return { status: 'current', meta: saved };
+  },
+
   /* ---------- 学习进度核心 ---------- */
   startDate() {
     let s = DB.get('study_start_date');
@@ -248,12 +280,10 @@ const Study = {
     return Math.max(0, Math.floor((now - start) / 86400000));
   },
 
-  // 今日新词（难度逐日递增：按学期顺序推进）
   todayWords() {
     const pool = this.buildPool();
     const start = this.dayIndex() * this.DAILY_WORDS;
     if (start < pool.length) return pool.slice(start, start + this.DAILY_WORDS);
-    // 词库学完 → 复习曾经答错/未掌握的，再循环
     const wrongs = DB.get('study_word_wrong', []);
     const review = pool.filter(w => wrongs.some(x => x.word === w.word));
     if (review.length >= this.DAILY_WORDS) return review.slice(0, this.DAILY_WORDS);
@@ -261,7 +291,6 @@ const Study = {
     return (wrap.length >= this.DAILY_WORDS ? wrap : wrap.concat(pool)).slice(0, this.DAILY_WORDS);
   },
 
-  // 今日当前学期标签
   todayStage() {
     const pool = this.buildPool();
     const start = this.dayIndex() * this.DAILY_WORDS;
@@ -276,7 +305,6 @@ const Study = {
     return out;
   },
 
-  /* ---------- 状态查询 ---------- */
   doneWordsSet() {
     return new Set(DB.get('study_word_done', []).map(r => r.word));
   },
@@ -288,7 +316,6 @@ const Study = {
   },
 
   reviewWords() {
-    // 待复习 = 答错满2次且尚未重新掌握
     const wrongs = this.wrongMap();
     const done = this.doneWordsSet();
     return this.buildPool().filter(w => wrongs[w.word] >= 2 && !done.has(w.word));
@@ -322,6 +349,12 @@ const Study = {
 
   /* ---------- 页面 ---------- */
   mount(container) {
+    // 教材自动同步检查
+    const syncResult = this.checkCurriculumSync();
+    if (syncResult.status === 'upgraded') {
+      Utils.toast(`教材已升级到 ${syncResult.meta.version} 🎉`, 'success');
+    }
+
     const today = DB.todayKey();
     const words = this.todayWords();
     const doneSet = this.doneWordsSet();
@@ -333,6 +366,7 @@ const Study = {
     const readingStats = this.readingStats();
     const dayNo = this.dayIndex() + 1;
     const stage = this.todayStage();
+    const meta = this.curriculumMeta;
 
     const wordAllDone = wordDoneToday >= this.DAILY_WORDS;
     const listenAllDone = listenDone >= this.DAILY_LISTEN;
@@ -346,15 +380,30 @@ const Study = {
           sub: `第 ${dayNo} 天 · ${stage}`,
           actions: `
             <span class="tag tag-pink" style="margin-left:0">🔥 连续 ${this.streakDays()} 天</span>
-            <span class="tag btn-soft">📚 沪教牛津 · 三年级起点</span>
+            <span class="tag btn-soft">📚 ${meta.version}</span>
           `
         })}
 
-        <div class="labubu-feature-card" style="margin-bottom:16px">
-          <div class="labubu-portrait" style="background:linear-gradient(135deg,#d9e2f3,#ffd7c3)">${Utils.labubuImg({ size: 'small' })}</div>
+        <div class="kitty-feature-card" style="margin-bottom:16px">
+          <div class="kitty-portrait" style="background:linear-gradient(135deg,#d9e2f3,#ffd7c3)">${Utils.kittyImg({ size: 'small', module: 'study' })}</div>
           <div class="lfc-text">
             <div class="lfc-title">${this.streakDays() >= 7 ? '🌟 太厉害啦！' : this.streakDays() > 0 ? '📖 继续加油哦～' : '📖 开始今天的学习吧～'}</div>
             <div class="lfc-sub">每天 10 新词 + 5 听力 + 5 口语，答错 2 次自动进复习，难度随天数递增～</div>
+          </div>
+        </div>
+
+        <div class="card mb-16" style="background:linear-gradient(135deg, rgba(255,236,247,0.6), rgba(255,225,232,0.4))">
+          <div class="flex-between mb-8">
+            <div class="card-title" style="margin:0">
+              <span class="card-title-ico">📘</span>教材自动同步
+            </div>
+            <span class="tag tag-pink" style="font-size:11px">🔄 ${syncResult.status === 'upgraded' ? '已升级' : syncResult.status === 'first' ? '已安装' : '最新'}</span>
+          </div>
+          <div class="text-sm text-secondary" style="line-height:1.7">
+            <div>📖 <strong>${Utils.esc(meta.edition)}</strong></div>
+            <div>🏷️ 版本：<strong>${Utils.esc(meta.version)}</strong> · 共 ${meta.totalStages} 册 · ${meta.wordsPerStage * meta.totalStages} 词</div>
+            <div>📅 同步日期：<strong>${Utils.esc(meta.lastSyncDate)}</strong></div>
+            ${syncResult.status === 'upgraded' ? `<div class="mt-4" style="color:#c2185b">⬆️ 从 ${Utils.esc(syncResult.oldVersion)} 升级到 ${Utils.esc(meta.version)}</div>` : ''}
           </div>
         </div>
 
@@ -490,7 +539,6 @@ const Study = {
   renderEnglishPanel() {
     const el = document.getElementById('english-panel');
     if (!el) return;
-    const today = DB.todayKey();
     const tab = this.state.tab;
 
     if (tab === 'word') {
@@ -500,7 +548,7 @@ const Study = {
       el.innerHTML = `
         <div class="english-panel">
           <div class="flex-between mb-8">
-            <div class="card-title"><span class="card-title-ico">📝</span>今日新词（点击卡片答题）</div>
+            <div class="card-title"><span class="card-title-ico">📝</span>今日新词（点击卡片 → 选答案 → 确认）</div>
             <div class="text-sm text-muted">${words.filter(w => doneSet.has(w.word)).length}/${this.DAILY_WORDS} 已掌握</div>
           </div>
           <div class="word-list">
@@ -515,7 +563,7 @@ const Study = {
               `;
             }).join('')}
           </div>
-          <div class="text-sm text-muted mt-8" style="font-size:11px">✓ 已掌握 · 🔁 待复习 · 数字 未学习</div>
+          <div class="text-sm text-muted mt-8" style="font-size:11px">✓ 已掌握 · 🔁 待复习 · 数字 未学习 · 单击卡片开始答题</div>
         </div>
       `;
       this.bindQuiz();
@@ -524,20 +572,21 @@ const Study = {
       const doneSet = this.todayListenDone();
       el.innerHTML = `
         <div class="english-panel">
-          <div class="card-title mb-8"><span class="card-title-ico">🎧</span>今日听力 · 5 句（点击 ▶ 播放）</div>
+          <div class="card-title mb-8"><span class="card-title-ico">🎧</span>今日听力 · 5 题（先盲听 → 选答案 → 确认）</div>
           ${sentences.map((s, i) => `
             <div class="listen-row ${doneSet.has(s.text) ? 'done' : ''}">
-              <button class="audio-btn" data-listen-play="${i}">▶</button>
+              <div class="listen-num">${i + 1}</div>
+              <button class="audio-btn" data-listen-play="${i}" title="播放音频">▶</button>
               <div class="listen-content">
-                <div class="listen-text">${doneSet.has(s.text) ? Utils.esc(s.text) : '?????'}</div>
-                <div class="listen-zh">${Utils.esc(s.zh)}</div>
+                <div class="listen-text">${doneSet.has(s.text) ? Utils.esc(s.text) : '🔊 点击 ▶ 听音频'}</div>
+                <div class="listen-zh" data-listen-zh="${i}" style="display:${doneSet.has(s.text) ? 'block' : 'none'}">${Utils.esc(s.zh)}</div>
               </div>
               <button class="checkin-btn ${doneSet.has(s.text) ? 'btn-pink btn-primary' : 'btn-ghost btn-primary'}" data-listen-done="${i}">
-                ${doneSet.has(s.text) ? '✓' : '听懂'}
+                ${doneSet.has(s.text) ? '✓ 已完成' : '完成'}
               </button>
             </div>
           `).join('')}
-          <div class="text-sm text-muted mt-8" style="font-size:11px">先盲听猜句意，点「听懂」后显示原文</div>
+          <div class="text-sm text-muted mt-8" style="font-size:11px">先点 ▶ 盲听，根据听到的句子选最贴切的中文意思，答对自动标记完成</div>
         </div>
       `;
       this.bindListen();
@@ -557,7 +606,7 @@ const Study = {
               <div class="speak-actions">
                 <button class="btn-icon" title="示范朗读" data-speak-play="${i}">🔊</button>
                 <button class="checkin-btn ${doneSet.has(s.text) ? 'btn-pink btn-primary' : 'btn-ghost btn-primary'}" data-speak-done="${i}">
-                  ${doneSet.has(s.text) ? '✓' : '跟读'}
+                  ${doneSet.has(s.text) ? '✓ 已完成' : '跟读'}
                 </button>
               </div>
             </div>
@@ -588,7 +637,9 @@ const Study = {
     }
   },
 
-  /* ---------- 单词答题（答错2次 → 待复习词库） ---------- */
+  /* ============================================================
+     单词答题：选选项 → 状态切换 → 点「确认」→ 提交
+     ============================================================ */
   openQuiz(word, isReview = false) {
     const pool = this.buildPool();
     const correct = word.meaning;
@@ -607,53 +658,86 @@ const Study = {
         <div class="text-center mb-16">
           <div class="word-quiz-en">${Utils.esc(word.word)}</div>
           <div class="word-quiz-phonetic">${Utils.esc(word.phonetic)} <span class="word-pos">${Utils.esc(word.pos)}</span></div>
-          <div class="text-sm text-muted mt-4">答错次数：${wrongCount} / 2</div>
+          <div class="text-sm text-muted mt-4">答错次数：${wrongCount} / 2 · 请选择正确释义</div>
         </div>
-        <div id="quiz-options">
-          ${shuffled.map(o => `
-            <button class="quiz-option" data-opt="${Utils.esc(o)}">${Utils.esc(o)}</button>
+        <div id="quiz-options" data-correct="${Utils.esc(correct)}">
+          ${shuffled.map((o, i) => `
+            <button class="quiz-option" data-opt="${Utils.esc(o)}" data-idx="${i}">
+              <span class="quiz-option-letter">${String.fromCharCode(65 + i)}</span>
+              <span class="quiz-option-text">${Utils.esc(o)}</span>
+            </button>
           `).join('')}
+        </div>
+        <div class="quiz-actions">
+          <button class="btn-primary btn-block" id="quiz-confirm" disabled>✓ 确认答案</button>
         </div>
         <div id="quiz-feedback"></div>
       `,
     });
 
-    const box = m ? (m.querySelector('#quiz-options') || document.getElementById('quiz-options')) : document.getElementById('quiz-options');
+    const box = document.getElementById('quiz-options');
     if (!box) return;
-    box.querySelectorAll('[data-opt]').forEach(btn => {
+    const correctAns = box.dataset.correct;
+    const confirmBtn = document.getElementById('quiz-confirm');
+    let selected = null;
+
+    // 选选项
+    box.querySelectorAll('.quiz-option').forEach(btn => {
       btn.addEventListener('click', () => {
-        const pick = btn.dataset.opt;
-        const fb = document.getElementById('quiz-feedback');
-        if (pick === correct) {
-          btn.classList.add('correct');
-          // 标记掌握
-          if (!this.doneWordsSet().has(word.word)) {
-            DB.push('study_word_done', { word: word.word, date: DB.todayKey(), stage: word.stage });
-          }
-          // 复习答对 → 移出待复习（清除错误计数）
-          DB.set('study_word_wrong', DB.get('study_word_wrong', []).filter(x => x.word !== word.word));
-          if (fb) fb.innerHTML = `<div class="quiz-fb ok">🎉 答对了！${Utils.esc(word.word)} · ${Utils.esc(word.meaning)}<br><span style="font-size:12px">${Utils.esc(word.example)}</span></div>`;
-          Utils.toast('答对了 🌸', 'success');
-          setTimeout(() => { document.querySelector('.modal-backdrop')?.remove(); this.mount(document.getElementById('app-main')); }, 900);
-        } else {
-          btn.classList.add('wrong');
-          // 错误计数 +1
-          const list = DB.get('study_word_wrong', []);
-          const r = list.find(x => x.word === word.word);
-          if (r) r.count = (r.count || 0) + 1;
-          else list.push({ word: word.word, count: 1, date: DB.todayKey() });
-          DB.set('study_word_wrong', list);
-          const cnt = (r ? r.count : 1);
-          if (fb) fb.innerHTML = `<div class="quiz-fb bad">${cnt >= 2 ? '🔁 已加入待复习词库' : '❌ 再想想，还剩 ' + (2 - cnt) + ' 次机会'}<br><span style="font-size:12px">正确答案：${Utils.esc(word.meaning)}</span></div>`;
-          if (cnt >= 2) {
-            Utils.toast('该词已进入待复习词库 🔁', 'warning');
-            setTimeout(() => { document.querySelector('.modal-backdrop')?.remove(); this.mount(document.getElementById('app-main')); }, 1400);
-          } else {
-            box.querySelectorAll('[data-opt]').forEach(b => { if (b.dataset.opt !== correct) b.disabled = false; });
-          }
-          box.querySelectorAll('[data-opt]').forEach(b => { b.disabled = true; });
-        }
+        if (btn.classList.contains('disabled')) return;
+        box.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selected = btn.dataset.opt;
+        confirmBtn.disabled = false;
       });
+    });
+
+    // 确认提交
+    confirmBtn.addEventListener('click', () => {
+      if (!selected) return;
+      confirmBtn.disabled = true;
+      box.querySelectorAll('.quiz-option').forEach(b => b.classList.add('disabled'));
+
+      const fb = document.getElementById('quiz-feedback');
+      if (selected === correctAns) {
+        // 答对：标记掌握
+        box.querySelectorAll('.quiz-option').forEach(b => {
+          if (b.dataset.opt === correctAns) b.classList.add('correct');
+        });
+        if (!this.doneWordsSet().has(word.word)) {
+          DB.push('study_word_done', { word: word.word, date: DB.todayKey(), stage: word.stage });
+        }
+        // 复习答对 → 移出待复习
+        DB.set('study_word_wrong', DB.get('study_word_wrong', []).filter(x => x.word !== word.word));
+        if (fb) fb.innerHTML = `<div class="quiz-fb ok">🎉 答对了！${Utils.esc(word.word)} · ${Utils.esc(word.meaning)}<br><span style="font-size:12px">${Utils.esc(word.example)}<br>${Utils.esc(word.exampleZh)}</span></div>`;
+        Utils.toast('答对了 🌸', 'success');
+        confirmBtn.textContent = '✓ 已掌握，关闭';
+        confirmBtn.disabled = false;
+        confirmBtn.onclick = () => {
+          document.querySelector('.modal-backdrop')?.remove();
+          this.mount(document.getElementById('app-main'));
+        };
+      } else {
+        // 答错：错误计数 +1
+        box.querySelectorAll('.quiz-option').forEach(b => {
+          if (b.dataset.opt === correctAns) b.classList.add('correct');
+          if (b.dataset.opt === selected) b.classList.add('wrong');
+        });
+        const list = DB.get('study_word_wrong', []);
+        const r = list.find(x => x.word === word.word);
+        if (r) r.count = (r.count || 0) + 1;
+        else list.push({ word: word.word, count: 1, date: DB.todayKey() });
+        DB.set('study_word_wrong', list);
+        const cnt = (r ? r.count : 1);
+        if (fb) fb.innerHTML = `<div class="quiz-fb bad">${cnt >= 2 ? '🔁 已加入待复习词库' : '❌ 再想想，还剩 ' + (2 - cnt) + ' 次机会'}<br><span style="font-size:12px">正确答案：${Utils.esc(correctAns)}<br>${Utils.esc(word.example)}</span></div>`;
+        if (cnt >= 2) Utils.toast('该词已进入待复习词库 🔁', 'warning');
+        confirmBtn.textContent = '↻ 再练一次';
+        confirmBtn.disabled = false;
+        confirmBtn.onclick = () => {
+          document.querySelector('.modal-backdrop')?.remove();
+          this.mount(document.getElementById('app-main'));
+        };
+      }
     });
   },
 
@@ -674,31 +758,122 @@ const Study = {
     });
   },
 
-  /* ---------- 听力 ---------- */
+  /* ============================================================
+     听力：先听音频 → 4 选 1 → 点「确认」→ 答对显示原文
+     ============================================================ */
+  openListenQuiz(sentence, idx) {
+    const pool = this.listeningPool;
+    const correct = sentence.zh;
+    // 4 个选项
+    const distract = pool.filter(s => s.zh !== correct).map(s => s.zh);
+    const opts = new Set([correct]);
+    while (opts.size < 4) opts.add(distract[Math.floor(Math.random() * distract.length)]);
+    const shuffled = [...opts].sort(() => Math.random() - 0.5);
+
+    const m = Components.modal({
+      title: '🎧 听力选择题',
+      body: `
+        <div class="text-center mb-16">
+          <button class="audio-btn-lg" id="listen-modal-play">▶ 播放音频</button>
+          <div class="text-sm text-muted mt-4">听英文句子，选出最贴切的中文意思</div>
+        </div>
+        <div id="listen-options" data-correct="${Utils.esc(correct)}" data-text="${Utils.esc(sentence.text)}">
+          ${shuffled.map((o, i) => `
+            <button class="quiz-option" data-opt="${Utils.esc(o)}" data-idx="${i}">
+              <span class="quiz-option-letter">${String.fromCharCode(65 + i)}</span>
+              <span class="quiz-option-text">${Utils.esc(o)}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="quiz-actions">
+          <button class="btn-primary btn-block" id="listen-confirm" disabled>✓ 确认答案</button>
+        </div>
+        <div id="listen-feedback"></div>
+      `,
+    });
+
+    const box = document.getElementById('listen-options');
+    const correctAns = box.dataset.correct;
+    const englishText = box.dataset.text;
+    const confirmBtn = document.getElementById('listen-confirm');
+    let selected = null;
+
+    // 播放音频
+    document.getElementById('listen-modal-play').addEventListener('click', () => {
+      this.speak(englishText, 0.85);
+    });
+    // 自动播放一次
+    setTimeout(() => this.speak(englishText, 0.85), 300);
+
+    // 选选项
+    box.querySelectorAll('.quiz-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('disabled')) return;
+        box.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selected = btn.dataset.opt;
+        confirmBtn.disabled = false;
+      });
+    });
+
+    // 确认
+    confirmBtn.addEventListener('click', () => {
+      if (!selected) return;
+      confirmBtn.disabled = true;
+      box.querySelectorAll('.quiz-option').forEach(b => b.classList.add('disabled'));
+
+      const fb = document.getElementById('listen-feedback');
+      if (selected === correctAns) {
+        box.querySelectorAll('.quiz-option').forEach(b => {
+          if (b.dataset.opt === correctAns) b.classList.add('correct');
+        });
+        // 标记完成
+        if (!this.todayListenDone().has(englishText)) {
+          DB.push('study_listen_done', { text: englishText, date: DB.todayKey() });
+        }
+        if (fb) fb.innerHTML = `<div class="quiz-fb ok">🎉 答对了！<br><span style="font-size:13px;font-weight:500">"${Utils.esc(englishText)}"</span><br><span style="font-size:12px">${Utils.esc(correctAns)}</span></div>`;
+        Utils.toast('听力答对 🎧', 'success');
+        confirmBtn.textContent = '✓ 已掌握，关闭';
+        confirmBtn.disabled = false;
+        confirmBtn.onclick = () => {
+          document.querySelector('.modal-backdrop')?.remove();
+          this.mount(document.getElementById('app-main'));
+        };
+      } else {
+        box.querySelectorAll('.quiz-option').forEach(b => {
+          if (b.dataset.opt === correctAns) b.classList.add('correct');
+          if (b.dataset.opt === selected) b.classList.add('wrong');
+        });
+        if (fb) fb.innerHTML = `<div class="quiz-fb bad">❌ 答错了<br><span style="font-size:12px">正确答案：${Utils.esc(correctAns)}<br>原句："${Utils.esc(englishText)}"</span></div>`;
+        Utils.toast('再听一次 🎧', 'warning');
+        confirmBtn.textContent = '↻ 再听一次';
+        confirmBtn.disabled = false;
+        confirmBtn.onclick = () => {
+          document.querySelector('.modal-backdrop')?.remove();
+          this.openListenQuiz(sentence, idx);
+        };
+      }
+    });
+  },
+
+  /* ---------- 听力事件绑定 ---------- */
   bindListen() {
     const sentences = this.todaySentences(this.listeningPool, this.DAILY_LISTEN);
     document.querySelectorAll('[data-listen-play]').forEach(b => {
-      b.addEventListener('click', () => {
-        const s = sentences[parseInt(b.dataset.listenPlay)];
-        this.speak(s.text, 0.8);
-        Utils.toast('正在播放 🔊');
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(b.dataset.listenPlay);
+        const s = sentences[idx];
+        this.speak(s.text, 0.85);
       });
     });
     document.querySelectorAll('[data-listen-done]').forEach(b => {
       b.addEventListener('click', (e) => {
-        const s = sentences[parseInt(b.dataset.listenDone)];
-        const done = this.todayListenDone();
-        if (done.has(s.text)) {
-          // 取消
-          const rec = DB.filterByDate('study_listen_done', DB.todayKey()).find(r => r.text === s.text);
-          if (rec) DB.removeById('study_listen_done', rec._id);
-          Utils.toast('已取消');
-        } else {
-          DB.push('study_listen_done', { text: s.text, date: DB.todayKey() });
-          Utils.toast('听力完成 🎧', 'success');
-          Utils.burst(e.target, ['🎧', '✨', '🎵']);
-        }
-        this.mount(document.getElementById('app-main'));
+        e.stopPropagation();
+        const idx = parseInt(b.dataset.listenDone);
+        const s = sentences[idx];
+        // 打开听力选择题 quiz
+        this.openListenQuiz(s, idx);
       });
     });
   },

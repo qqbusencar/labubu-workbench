@@ -27,8 +27,8 @@ const Wellness = {
           `
         })}
 
-        <div class="labubu-feature-card" style="margin-bottom:16px">
-          <div class="labubu-portrait" style="background:linear-gradient(135deg,#ffd6e6,#ffc6d5)">${Utils.labubuImg({ size: 'small' })}</div>
+        <div class="kitty-feature-card" style="margin-bottom:16px">
+          <div class="kitty-portrait" style="background:linear-gradient(135deg,#ffd6e6,#ffc6d5)">${Utils.kittyImg({ size: 'small', module: 'wellness' })}</div>
           <div class="lfc-text">
             <div class="lfc-title">🌿 今日小提示</div>
             <div class="lfc-sub">${products.length ? `${products.length} 项保健品在守护你，按时打卡记得按时服用哦～` : '添加你的第一种保健品开始一天的健康管理吧～'}</div>

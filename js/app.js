@@ -1,5 +1,5 @@
 /* ============================================================
-   Labubu 治愈工作台 — 主应用控制器
+   Hello Kitty 治愈工作台 — 主应用控制器
    ============================================================ */
 
 const App = {
@@ -12,15 +12,17 @@ const App = {
     this.setupHeader();
     this.setupMore();
     this.setupShortcuts();
+    this.setupCloudSync();
 
     // 默认页面
     this.go(this.currentPage);
 
     // 暴露给开发使用
-    window.Labubu = {
+    window.Kitty = {
       DB,
       Utils,
       Components,
+      SupabaseCfg,
       Fitness,
       Wellness,
       Study,
@@ -144,18 +146,18 @@ const App = {
     menu?.querySelector('[data-action="about"]')?.addEventListener('click', () => {
       menu.classList.add('hidden');
       Components.modal({
-        title: '关于 Labubu 治愈工作台',
+        title: '关于 Hello Kitty 治愈工作台',
         body: `
           <div class="text-center mb-16">
-            ${Utils.labubuSvg({ size: 100 })}
+            ${Utils.kittyImg({ size: 'card', module: 'default' })}
           </div>
           <p style="line-height:1.7;color:var(--text-secondary);font-size:14px">
             这是为热爱生活的你打造的<strong style="color:var(--primary-deep)">全能自律工作台</strong>。
             集健身打卡、养生打卡、学习收获、每日运势、信息资讯于一体，
-            拥有 Labubu 治愈梦幻风的视觉体验，所有数据云端同步。
+            拥有 Hello Kitty 治愈梦幻风的视觉体验，支持本地存储 + 云端同步。
           </p>
           <div class="mt-12 text-sm text-muted">
-            <div>版本：V1.0.0 · 全程 WorkBuddy 设计 + 开发</div>
+            <div>版本：V2.0.0 · 全程 WorkBuddy 设计 + 开发</div>
             <div class="mt-4">每日内容：沪教牛津版 · 数据来源：模拟</div>
           </div>
         `,
@@ -212,7 +214,7 @@ const App = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `labubu-backup-${DB.todayKey()}.json`;
+    a.download = `kitty-backup-${DB.todayKey()}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -291,6 +293,266 @@ const App = {
       DB.set('password', v1);
       Utils.toast('密码已保存，下次进入需要解锁', 'success');
       m.remove();
+    });
+  },
+
+  // ============================================================
+  // 云同步：初始化 + 登录入口 + 状态指示
+  // ============================================================
+  async setupCloudSync() {
+    DB._initNetworkWatcher();
+
+    // 初始化 Supabase 客户端（如果凭据已配置）
+    await SupabaseCfg.init();
+
+    // 监听登录状态变化 → 同步状态徽章
+    const refreshBadge = () => this.refreshSyncBadge();
+    SupabaseCfg.onAuthChange(refreshBadge);
+    DB.onSyncChange(refreshBadge);
+
+    // 已登录则拉取云端数据
+    if (SupabaseCfg.user) {
+      const merged = await DB.pullFromCloud();
+      if (merged > 0) {
+        Utils.toast(`已从云端恢复 ${merged} 项数据 💖`, 'success');
+        this.go(this.currentPage);
+      }
+    }
+
+    // 在 PC 顶栏和移动菜单插入云同步入口
+    this.injectCloudEntry();
+
+    // 首次刷新状态徽章
+    refreshBadge();
+  },
+
+  // 刷新同步状态徽章
+  refreshSyncBadge() {
+    document.querySelectorAll('[data-sync-badge]').forEach(el => {
+      const status = SupabaseCfg.ENABLED ? (SupabaseCfg.user ? DB.syncStatus : 'guest') : 'disabled';
+      el.className = 'sync-badge sync-' + status;
+      el.dataset.status = status;
+      el.innerHTML = this._syncBadgeHtml(status);
+    });
+  },
+
+  _syncBadgeHtml(status) {
+    const iconMap = {
+      disabled: '☁️',
+      guest: '☁️',
+      idle: '☁️',
+      syncing: '🔄',
+      success: '✅',
+      error: '⚠️',
+      offline: '📴',
+    };
+    const textMap = {
+      disabled: '本地',
+      guest: '登录同步',
+      idle: '已同步',
+      syncing: '同步中',
+      success: '已同步',
+      error: '同步失败',
+      offline: '离线',
+    };
+    return `<span class="sync-ico">${iconMap[status] || '☁️'}</span>${textMap[status] || ''}`;
+  },
+
+  // 注入云同步入口（PC 顶栏 + 移动更多菜单）
+  injectCloudEntry() {
+    // PC 顶栏
+    const pcFooter = document.querySelector('.pc-footer');
+    if (pcFooter && !document.getElementById('pc-cloud')) {
+      const btn = document.createElement('button');
+      btn.id = 'pc-cloud';
+      btn.className = 'pc-icon-btn';
+      btn.title = '云同步';
+      btn.innerHTML = `<span data-sync-badge class="sync-badge">${this._syncBadgeHtml(SupabaseCfg.status())}</span>`;
+      btn.addEventListener('click', () => this.openCloudDialog());
+      pcFooter.insertBefore(btn, pcFooter.firstChild);
+    }
+    // 移动更多菜单
+    const menu = document.getElementById('mobile-more-menu');
+    if (menu && !menu.querySelector('[data-action="cloud"]')) {
+      const item = document.createElement('button');
+      item.dataset.action = 'cloud';
+      item.innerHTML = `<span data-sync-badge class="sync-badge">${this._syncBadgeHtml(SupabaseCfg.status())}</span> 云同步`;
+      item.addEventListener('click', () => {
+        menu.classList.add('hidden');
+        this.openCloudDialog();
+      });
+      // 插入到"关于"之前
+      const about = menu.querySelector('[data-action="about"]');
+      if (about) menu.insertBefore(item, about);
+      else menu.appendChild(item);
+    }
+  },
+
+  // 云同步弹窗
+  async openCloudDialog() {
+    // 三种状态：未配置 / 未登录 / 已登录
+    if (!SupabaseCfg.ENABLED) {
+      // 未配置 → 详细启用步骤 + 一键保存凭据
+      Components.modal({
+        title: '☁️ 启用云同步',
+        body: `
+          <p style="margin:0 0 10px;font-size:14px;color:var(--text-primary)">
+            <strong style="color:var(--primary-deep)">3 步启用（约 5 分钟，账户即用 GitHub 登录）</strong>
+          </p>
+          <ol style="margin:0 0 12px;padding-left:18px;line-height:1.8;font-size:13px;color:var(--text-secondary)">
+            <li>打开 <a href="https://supabase.com" target="_blank" style="color:var(--primary);text-decoration:underline">supabase.com</a>，用 <b>GitHub 账号</b> 登录 → <b>New project</b>（记下数据库密码）。</li>
+            <li>左侧 <b>Project Settings → API</b>，复制 <b>Project URL</b> 与 <b>anon public key</b>，填到下方保存即可自动启用。</li>
+            <li>左侧 <b>SQL Editor</b> 新建查询，粘贴并执行项目里的 <code style="background:rgba(0,0,0,0.05);padding:1px 5px;border-radius:4px">schema.sql</code> 建表；再在 <b>Authentication → Providers</b> 开启 <b>GitHub</b>（回调填 <code style="background:rgba(0,0,0,0.05);padding:1px 5px;border-radius:4px">https://&lt;ref&gt;.supabase.co/auth/v1/callback</code>），并在 <b>URL Configuration</b> 的 Redirect URLs 增加你的站点地址。</li>
+          </ol>
+          <div style="background:rgba(255,143,188,0.08);border-radius:12px;padding:12px;margin-bottom:10px">
+            <label class="text-sm" style="display:block;color:var(--text-secondary);margin-bottom:4px">Project URL</label>
+            <input id="cfg-url" class="input mb-8" placeholder="https://xxxx.supabase.co" />
+            <label class="text-sm" style="display:block;color:var(--text-secondary);margin-bottom:4px">anon public key</label>
+            <input id="cfg-key" class="input mb-8" placeholder="eyJhbGciOi..." />
+            <div id="cfg-err" class="text-sm" style="color:#e74c3c;min-height:16px;margin-bottom:6px"></div>
+            <button class="btn-primary btn-block" data-act="save-cfg">💾 保存并启用云同步</button>
+          </div>
+          <p class="text-sm text-muted">数据只存在你自己的 Supabase 项目里；未配置时一切数据仍安全保存在浏览器本地，可离线使用。</p>
+        `,
+        footer: `<button class="btn-ghost btn-primary" data-act="close">关闭</button>`,
+      });
+      const m = document.querySelector('.modal-backdrop');
+      m.querySelector('[data-act="close"]').addEventListener('click', () => m.remove());
+      m.querySelector('[data-act="save-cfg"]').addEventListener('click', async () => {
+        const errEl = m.querySelector('#cfg-err');
+        errEl.textContent = '';
+        const url = m.querySelector('#cfg-url').value.trim();
+        const key = m.querySelector('#cfg-key').value.trim();
+        Utils.toast('正在连接云同步...', 'info');
+        const { error } = await SupabaseCfg.saveConfig(url, key);
+        if (error) { errEl.textContent = error.message || '启用失败'; return; }
+        m.remove();
+        Utils.toast('云同步已启用 ✅ 请用 GitHub 登录', 'success');
+        this.refreshSyncBadge();
+        this.openCloudDialog(); // ENABLED 后进入登录流程
+      });
+      return;
+    }
+
+    if (!SupabaseCfg.user) {
+      // 未登录 → 显示登录/注册表单
+      this.openAuthDialog();
+      return;
+    }
+
+    // 已登录 → 显示同步状态
+    const cloud = await DB.pullFromCloud();
+    Components.modal({
+      title: '☁️ 云同步',
+      body: `
+        <div class="text-center mb-16">
+          <div style="font-size:36px">☁️</div>
+          <p style="margin:8px 0;color:var(--text-secondary);font-size:14px">
+            已登录：<strong>${Utils.esc(SupabaseCfg.user.email || SupabaseCfg.user.user_metadata?.user_name || 'GitHub 用户')}</strong>
+          </p>
+        </div>
+        <div class="card mb-12" style="padding:12px">
+          <div class="flex-between mb-8">
+            <span class="text-sm text-secondary">当前状态</span>
+            <span data-sync-badge class="sync-badge sync-${DB.syncStatus}">${this._syncBadgeHtml(DB.syncStatus)}</span>
+          </div>
+          <div class="flex-between mb-8">
+            <span class="text-sm text-secondary">网络</span>
+            <span class="text-sm">${navigator.onLine ? '🟢 在线' : '🔴 离线'}</span>
+          </div>
+        </div>
+        <div class="flex gap-8" style="gap:8px">
+          <button class="btn-primary" data-act="sync" style="flex:1">🔄 立即同步</button>
+          <button class="btn-ghost" data-act="logout" style="flex:1">退出登录</button>
+        </div>
+      `,
+      footer: `<button class="btn-ghost btn-primary" data-act="close">关闭</button>`,
+    });
+    const m = document.querySelector('.modal-backdrop');
+    m.querySelector('[data-act="close"]').addEventListener('click', () => m.remove());
+    m.querySelector('[data-act="logout"]').addEventListener('click', async () => {
+      await SupabaseCfg.signOut();
+      m.remove();
+      Utils.toast('已退出云同步', 'success');
+    });
+    m.querySelector('[data-act="sync"]').addEventListener('click', async () => {
+      Utils.toast('开始全量同步...', 'info');
+      const n = await DB.pushAllToCloud();
+      Utils.toast(`已推送 ${n} 项到云端 ☁️`, 'success');
+      this.refreshSyncBadge();
+    });
+  },
+
+  // 登录/注册弹窗
+  openAuthDialog() {
+    Components.modal({
+      title: '☁️ 云同步登录',
+      body: `
+        <div id="auth-form">
+          <p class="mb-12 text-sm text-secondary">推荐用 GitHub 一键登录（你的 Supabase 账户即 GitHub 账号）；也可下方用邮箱注册。</p>
+          <button class="btn-primary btn-block mb-12" data-act="github" style="background:linear-gradient(135deg,#24292e,#404a56);color:#fff">🐙 使用 GitHub 登录</button>
+          <div style="text-align:center;color:var(--text-muted);font-size:12px;margin-bottom:10px">— 或使用邮箱 —</div>
+          <label class="text-sm text-secondary mb-4" style="display:block">邮箱</label>
+          <input id="auth-email" type="email" class="input mb-12" placeholder="your@email.com" />
+          <label class="text-sm text-secondary mb-4" style="display:block">密码</label>
+          <input id="auth-pwd" type="password" class="input mb-12" placeholder="至少 6 位" />
+          <div id="auth-error" class="text-sm" style="color:#e74c3c;min-height:18px;margin-bottom:8px"></div>
+          <div class="flex gap-8" style="gap:8px">
+            <button class="btn-primary" data-act="signup" style="flex:1">注册新账号</button>
+            <button class="btn-ghost btn-primary" data-act="signin" style="flex:1">登录</button>
+          </div>
+        </div>
+      `,
+    });
+    const m = document.querySelector('.modal-backdrop');
+    const showError = (msg) => {
+      const el = m.querySelector('#auth-error');
+      el.textContent = msg;
+    };
+    const getCreds = () => ({
+      email: m.querySelector('#auth-email').value.trim(),
+      password: m.querySelector('#auth-pwd').value,
+    });
+    const doAuth = async (act) => {
+      const { email, password } = getCreds();
+      if (!email || !password) return showError('请填写邮箱和密码');
+      if (password.length < 6) return showError('密码至少 6 位');
+      showError('');
+      const fn = act === 'signup' ? SupabaseCfg.signUp : SupabaseCfg.signIn;
+      const { error } = await fn.call(SupabaseCfg, email, password);
+      if (error) {
+        return showError(error.message || '操作失败');
+      }
+      Utils.toast(act === 'signup' ? '注册成功 ✅' : '登录成功 💖', 'success');
+      // 登录后推送本地数据到云端
+      if (act === 'signin') {
+        const pulled = await DB.pullFromCloud();
+        if (pulled === 0) {
+          await DB.pushAllToCloud();
+        }
+        this.go(this.currentPage);
+      } else {
+        await DB.pushAllToCloud();
+      }
+      m.remove();
+      this.refreshSyncBadge();
+    };
+    m.querySelector('[data-act="signup"]').addEventListener('click', () => doAuth('signup'));
+    m.querySelector('[data-act="signin"]').addEventListener('click', () => doAuth('signin'));
+    // GitHub OAuth 登录（重定向到 GitHub 授权）
+    m.querySelector('[data-act="github"]').addEventListener('click', async () => {
+      Utils.toast('正在跳转到 GitHub 授权…', 'info');
+      const { error } = await SupabaseCfg.signInWithGitHub();
+      if (error) {
+        showError(error.message || 'GitHub 登录启动失败（请确认已在 Supabase 开启 GitHub Provider 并配置回调）');
+      }
+      // 成功时浏览器会被重定向到 GitHub，授权后自动回到本应用
+    });
+    // Enter 提交
+    [m.querySelector('#auth-email'), m.querySelector('#auth-pwd')].forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') doAuth('signin');
+      });
     });
   },
 };

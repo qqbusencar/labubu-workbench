@@ -1,5 +1,5 @@
 /* ============================================================
-   Labubu 治愈工作台 — 动画
+   Hello Kitty 治愈工作台 — 动画
    ============================================================ */
 
 /* 通用浮动 */
@@ -86,14 +86,14 @@
 
 .fade-in { animation: fade-in 0.5s ease; }
 
-/* Labubu 摇摆 */
-@keyframes labubu-sway {
+/* Hello Kitty 摇摆 */
+@keyframes kitty-sway {
   0%, 100% { transform: rotate(-3deg) translateY(0); }
   50% { transform: rotate(3deg) translateY(-4px); }
 }
 
-.labubu-stand {
-  animation: labubu-sway 4s ease-in-out infinite;
+.kitty-stand {
+  animation: kitty-sway 4s ease-in-out infinite;
   transform-origin: center bottom;
   display: inline-block;
 }
@@ -130,8 +130,8 @@
 
 .slide-up { animation: slide-up 0.4s ease both; }
 
-/* 通用 Labubu 容器 */
-.labubu-wrap {
+/* 通用 Hello Kitty 容器 */
+.kitty-wrap {
   display: inline-block;
   position: relative;
 }

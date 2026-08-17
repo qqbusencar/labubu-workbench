@@ -1,5 +1,5 @@
 /* ============================================================
-   Labubu 治愈工作台 — 各模块样式
+   Hello Kitty 治愈工作台 — 各模块样式
    ============================================================ */
 
 /* ============ 健身打卡 ============ */
@@ -1119,12 +1119,12 @@
   .tile-ico { font-size: 20px; }
 }
 
-/* ============ 通用：页面吉祥物 + 空状态 Labubu ============ */
+/* ============ 通用：页面吉祥物 + 空状态 Hello Kitty ============ */
 .page-mascot {
   flex-shrink: 0;
   filter: drop-shadow(0 4px 8px rgba(124, 91, 166, 0.18));
 }
-.empty-labubu {
+.empty-kitty {
   margin: 0 auto 8px;
   filter: drop-shadow(0 3px 6px rgba(124, 91, 166, 0.15));
   opacity: 0.92;
@@ -1273,7 +1273,7 @@
 .speak-tip { font-size: 11px; color: var(--primary-deep, #7c5ba6); margin-top: 4px; }
 .speak-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-/* ============ 运势页 Labubu ============ */
+/* ============ 运势页 Hello Kitty ============ */
 .fortune-hero-mascot {
   position: absolute;
   top: -10px;
@@ -1315,28 +1315,29 @@ body[data-theme="dark"] .quiz-option {
 body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); }
 
 /* ============================================================
-   拉布布真实立绘（草帽粉色背带裤）— 各模块通用样式
+   Hello Kitty真实立绘（草帽粉色背带裤）— 各模块通用样式
    ============================================================ */
 
-/* 基础图片（不同尺寸的默认最大宽度） */
-.labubu-img {
+/* 基础图片：Kitty 立绘均为正方形（1:1），用 contain 完整显示、不裁切、不溢出 */
+.kitty-img {
   display: block;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   border-radius: 12px;
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
 }
-.labubu-tiny { width: 48px; height: 85px; border-radius: 8px; }
-.labubu-small { width: 96px; height: 170px; border-radius: 14px; }
-.labubu-thumb { width: 128px; height: 226px; border-radius: 16px; }
-.labubu-medium { width: 180px; height: 318px; border-radius: 18px; }
-.labubu-card { width: 240px; height: 425px; border-radius: 20px; }
-.labubu-header { width: 320px; height: 566px; border-radius: 22px; }
-.labubu-hero { width: 100%; max-width: 480px; height: auto; aspect-ratio: 340/600; border-radius: 24px; }
+.kitty-tiny { width: 48px; height: 48px; border-radius: 10px; }
+.kitty-small { width: 96px; height: 96px; border-radius: 16px; }
+.kitty-thumb { width: 128px; height: 128px; border-radius: 18px; }
+.kitty-medium { width: 180px; height: 180px; border-radius: 20px; }
+.kitty-card { width: 240px; height: 240px; border-radius: 22px; }
+.kitty-header { width: 320px; height: 320px; border-radius: 24px; }
+.kitty-hero { width: 100%; max-width: 480px; height: auto; aspect-ratio: 1 / 1; border-radius: 24px; }
 
 /* 圆角头像 */
-.labubu-avatar {
+.kitty-avatar {
   border-radius: 50%;
   overflow: hidden;
   display: inline-block;
@@ -1344,10 +1345,10 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   padding: 2px;
   flex-shrink: 0;
 }
-.labubu-avatar.ring {
+.kitty-avatar.ring {
   box-shadow: 0 0 0 2px var(--primary-soft, #b497d6), 0 4px 12px rgba(180, 151, 214, 0.3);
 }
-.labubu-avatar-img {
+.kitty-avatar-img {
   width: 100% !important;
   height: 100% !important;
   border-radius: 50% !important;
@@ -1386,20 +1387,22 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   position: relative;
   z-index: 1;
   flex-shrink: 0;
-  width: 90px; height: 130px;
-  border-radius: 14px;
+  width: 88px; height: 88px;
+  border-radius: 16px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 4px;
   transform: rotate(2deg);
   box-shadow: 0 6px 18px rgba(180, 151, 214, 0.35);
   filter: drop-shadow(0 8px 14px rgba(180, 151, 214, 0.25));
   animation: banner-float 4s ease-in-out infinite;
 }
-.module-banner-art .labubu-img {
+.module-banner-art .kitty-img {
   width: 100%;
   height: 100%;
-  border-radius: 14px;
-  object-fit: cover;
-  object-position: center 30%;
+  border-radius: 12px;
+  object-fit: contain;
+  object-position: center;
 }
 @keyframes banner-float {
   0%, 100% { transform: rotate(2deg) translateY(0); }
@@ -1413,8 +1416,8 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
 .module-banner.banner-fortune { background: linear-gradient(135deg, rgba(217, 194, 236, 0.55), rgba(184, 151, 220, 0.35)); }
 .module-banner.banner-news { background: linear-gradient(135deg, rgba(207, 232, 234, 0.55), rgba(217, 194, 236, 0.4)); }
 
-/* === 空状态：拉布布大立绘 + 温暖文案 === */
-.empty-labubu-hero {
+/* === 空状态：Hello Kitty大立绘 + 温暖文案 === */
+.empty-kitty-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1424,7 +1427,7 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   position: relative;
   overflow: hidden;
 }
-.empty-labubu-hero::before {
+.empty-kitty-hero::before {
   content: '';
   position: absolute;
   width: 200px; height: 200px;
@@ -1432,7 +1435,7 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   background: radial-gradient(circle, rgba(255, 198, 213, 0.5), transparent 70%);
   border-radius: 50%;
 }
-.empty-labubu-hero::after {
+.empty-kitty-hero::after {
   content: '';
   position: absolute;
   width: 160px; height: 160px;
@@ -1440,30 +1443,32 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   background: radial-gradient(circle, rgba(184, 216, 232, 0.4), transparent 70%);
   border-radius: 50%;
 }
-.empty-labubu-hero .labubu-portrait {
+.empty-kitty-hero .kitty-portrait {
   position: relative;
   z-index: 1;
-  width: 130px;
-  height: 200px;
-  border-radius: 16px;
+  width: 116px;
+  height: 116px;
+  border-radius: 18px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 4px;
   box-shadow: 0 12px 28px rgba(180, 151, 214, 0.35);
   transform: rotate(-2deg);
   animation: hero-sway 5s ease-in-out infinite;
 }
-.empty-labubu-hero .labubu-portrait .labubu-img {
+.empty-kitty-hero .kitty-portrait .kitty-img {
   width: 100%;
   height: 100%;
-  border-radius: 16px;
-  object-fit: cover;
-  object-position: center 30%;
+  border-radius: 14px;
+  object-fit: contain;
+  object-position: center;
 }
 @keyframes hero-sway {
   0%, 100% { transform: rotate(-2deg) translateY(0); }
   50% { transform: rotate(-2deg) translateY(-6px); }
 }
-.empty-labubu-hero .empty-title { position: relative; z-index: 1; }
-.empty-labubu-hero .empty-sub { position: relative; z-index: 1; }
+.empty-kitty-hero .empty-title { position: relative; z-index: 1; }
+.empty-kitty-hero .empty-sub { position: relative; z-index: 1; }
 
 /* === 顶栏/移动端小头像 === */
 .mobile-avatar.is-img {
@@ -1477,23 +1482,26 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   object-position: center 25%;
 }
 
-/* === 锁屏拉布布大图 === */
-.lock-labubu.is-img {
-  width: 200px; height: 240px;
-  border-radius: 20px;
+/* === 锁屏Hello Kitty大图 === */
+.lock-kitty.is-img {
+  width: 200px; height: 200px;
+  border-radius: 22px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 8px;
   margin: 0 auto 20px;
   box-shadow: 0 14px 30px rgba(180, 151, 214, 0.4);
   animation: hero-sway 5s ease-in-out infinite;
 }
-.lock-labubu.is-img img {
+.lock-kitty.is-img img {
   width: 100%; height: 100%;
-  object-fit: cover;
-  object-position: center 30%;
+  border-radius: 16px;
+  object-fit: contain;
+  object-position: center;
 }
 
 /* === 大数据图：横跨一整行的卡 === */
-.labubu-feature-card {
+.kitty-feature-card {
   position: relative;
   display: flex;
   align-items: center;
@@ -1505,55 +1513,59 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   box-shadow: 0 6px 18px rgba(180, 151, 214, 0.18);
   overflow: hidden;
 }
-.labubu-feature-card .labubu-portrait {
+.kitty-feature-card .kitty-portrait {
   flex-shrink: 0;
-  width: 90px;
-  height: 130px;
-  border-radius: 14px;
+  width: 84px;
+  height: 84px;
+  border-radius: 16px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+  padding: 4px;
   box-shadow: 0 6px 14px rgba(180, 151, 214, 0.3);
   transform: rotate(-2deg);
 }
-.labubu-feature-card .labubu-portrait .labubu-img {
+.kitty-feature-card .kitty-portrait .kitty-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 30%;
-  border-radius: 14px;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 12px;
 }
-.labubu-feature-card .lfc-text { flex: 1; min-width: 0; }
-.labubu-feature-card .lfc-title {
+.kitty-feature-card .lfc-text { flex: 1; min-width: 0; }
+.kitty-feature-card .lfc-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--primary-deep, #6e4ca8);
   margin-bottom: 4px;
 }
-.labubu-feature-card .lfc-sub {
+.kitty-feature-card .lfc-sub {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
 }
 
 /* === 浮动小立绘（放到卡片右下角做氛围） === */
-.floating-labubu {
+.floating-kitty {
   position: absolute;
-  bottom: -10px;
-  right: -8px;
-  width: 64px;
-  height: 92px;
-  border-radius: 10px;
+  bottom: -8px;
+  right: -6px;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
   overflow: hidden;
+  background: rgba(255, 255, 255, 0.65);
+  padding: 3px;
   transform: rotate(8deg);
   box-shadow: 0 6px 14px rgba(180, 151, 214, 0.3);
   animation: gentle-float 4s ease-in-out infinite;
   pointer-events: none;
 }
-.floating-labubu .labubu-img {
+.floating-kitty .kitty-img {
   width: 100% !important;
   height: 100% !important;
-  border-radius: 10px;
-  object-fit: cover;
-  object-position: center 30%;
+  border-radius: 9px;
+  object-fit: contain;
+  object-position: center;
 }
 @keyframes gentle-float {
   0%, 100% { transform: rotate(8deg) translateY(0); }
@@ -1563,31 +1575,31 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
 /* === 自适应：移动端让立绘小一些 === */
 @media (max-width: 600px) {
   .module-banner-art {
-    width: 70px; height: 102px;
+    width: 72px; height: 72px;
   }
-  .empty-labubu-hero .labubu-portrait {
-    width: 110px; height: 168px;
+  .empty-kitty-hero .kitty-portrait {
+    width: 100px; height: 100px;
   }
-  .labubu-feature-card .labubu-portrait {
-    width: 72px; height: 104px;
+  .kitty-feature-card .kitty-portrait {
+    width: 72px; height: 72px;
   }
-  .floating-labubu { width: 52px; height: 76px; }
-  .lock-labubu.is-img { width: 160px; height: 192px; }
+  .floating-kitty { width: 52px; height: 52px; }
+  .lock-kitty.is-img { width: 160px; height: 160px; }
 }
 
-/* === 深色模式：拉布布立绘加柔光蒙层 === */
+/* === 深色模式：Hello Kitty立绘加柔光蒙层 === */
 body[data-theme="dark"] .module-banner {
   background: linear-gradient(135deg, rgba(60, 50, 80, 0.7), rgba(40, 35, 60, 0.6)) !important;
 }
-body[data-theme="dark"] .labubu-feature-card {
+body[data-theme="dark"] .kitty-feature-card {
   background: linear-gradient(135deg, rgba(60, 50, 80, 0.55), rgba(40, 35, 60, 0.5)) !important;
 }
-body[data-theme="dark"] .empty-labubu-hero {
+body[data-theme="dark"] .empty-kitty-hero {
   background: linear-gradient(135deg, rgba(60, 50, 80, 0.6), rgba(40, 35, 60, 0.5)) !important;
 }
 body[data-theme="dark"] .module-banner::before,
-body[data-theme="dark"] .labubu-feature-card::before,
-body[data-theme="dark"] .empty-labubu-hero::before,
-body[data-theme="dark"] .empty-labubu-hero::after {
+body[data-theme="dark"] .kitty-feature-card::before,
+body[data-theme="dark"] .empty-kitty-hero::before,
+body[data-theme="dark"] .empty-kitty-hero::after {
   opacity: 0.25;
 }

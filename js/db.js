@@ -39,7 +39,10 @@ const DB = {
   set(key, value) {
     try {
       localStorage.setItem(this.PREFIX + key, JSON.stringify(value));
+      this._lastLocalWriteTime = this._lastLocalWriteTime || {};
+      this._lastLocalWriteTime[key] = Date.now();
       this.logSync(key, 'write');
+      this._enqueueSync(key);
       return true;
     } catch (e) {
       console.error('DB.set failed:', key, e);
@@ -50,6 +53,9 @@ const DB = {
   // 删除
   remove(key) {
     localStorage.removeItem(this.PREFIX + key);
+    this._lastLocalWriteTime = this._lastLocalWriteTime || {};
+    delete this._lastLocalWriteTime[key];
+    this._enqueueSync(key);
   },
 
   // 推送单条记录（带日期）
@@ -187,6 +193,132 @@ const DB = {
     for (const k of Object.values(this.keys)) {
       this.remove(k);
     }
+  },
+
+  // ============================================================
+  // 云同步：localStorage + Supabase 双写模式
+  // ============================================================
+  // 策略：
+  // - 本地写入立即生效（保证离线可用）
+  // - 已登录 + Supabase 可用时，后台推送到云端
+  // - 启动时若云端有数据且比本地新，自动拉取并合并
+  // - 网络异常时静默重试，不阻塞 UI
+  // ============================================================
+
+  _syncQueue: new Map(),          // 待同步的 key 队列（防抖合并）
+  _syncTimer: null,
+  _syncListeners: new Set(),      // 同步状态订阅
+  _syncStatus: 'idle',            // idle / syncing / success / error / offline
+
+  get syncStatus() { return this._syncStatus; },
+
+  onSyncChange(fn) {
+    this._syncListeners.add(fn);
+    return () => this._syncListeners.delete(fn);
+  },
+
+  _setSyncStatus(s) {
+    this._syncStatus = s;
+    this._syncListeners.forEach(fn => {
+      try { fn(s); } catch (e) { /* noop */ }
+    });
+  },
+
+  // 触发同步某个 key（防抖 1.5s 合并多次写入）
+  _enqueueSync(key) {
+    if (!SupabaseCfg.ENABLED || !SupabaseCfg.user) return;
+    this._syncQueue.set(key, true);
+    if (this._syncTimer) clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(() => this._flushSync(), 1500);
+  },
+
+  // 执行队列中的同步
+  async _flushSync() {
+    if (!SupabaseCfg.ENABLED || !SupabaseCfg.user) return;
+    if (this._syncQueue.size === 0) return;
+    if (!navigator.onLine) {
+      this._setSyncStatus('offline');
+      return;
+    }
+    this._setSyncStatus('syncing');
+    const keys = Array.from(this._syncQueue.keys());
+    this._syncQueue.clear();
+    let hasError = false;
+    for (const k of keys) {
+      const value = this.get(k);
+      const ok = await SupabaseCfg.pushKey(k, value);
+      if (!ok) {
+        hasError = true;
+        // 失败时重新入队
+        this._syncQueue.set(k, true);
+      }
+    }
+    this._setSyncStatus(hasError ? 'error' : 'success');
+    // 3 秒后回到 idle
+    setTimeout(() => {
+      if (this._syncStatus !== 'syncing') this._setSyncStatus('idle');
+    }, 3000);
+  },
+
+  // 启动时拉取云端数据并合并到本地
+  async pullFromCloud() {
+    if (!SupabaseCfg.ENABLED || !SupabaseCfg.user) return 0;
+    if (!navigator.onLine) return 0;
+    this._setSyncStatus('syncing');
+    try {
+      const cloud = await SupabaseCfg.fetchAll();
+      let merged = 0;
+      for (const [key, row] of Object.entries(cloud)) {
+        // 仅同步我们认识的 key
+        if (!Object.values(this.keys).includes(key)) continue;
+        const local = this.get(key, null);
+        const cloudTime = new Date(row.updated_at).getTime();
+        const localTime = local ? (this._lastLocalWriteTime[key] || 0) : 0;
+        // 简单的 last-write-wins：云端更新则覆盖本地
+        if (!local || cloudTime >= localTime) {
+          this.set(key, row.data);
+          merged++;
+        }
+      }
+      this._setSyncStatus('success');
+      setTimeout(() => this._setSyncStatus('idle'), 2000);
+      return merged;
+    } catch (e) {
+      console.warn('[DB] pullFromCloud failed:', e);
+      this._setSyncStatus('error');
+      return 0;
+    }
+  },
+
+  // 全量推送到云端（首次登录或手动同步）
+  async pushAllToCloud() {
+    if (!SupabaseCfg.ENABLED || !SupabaseCfg.user) return 0;
+    if (!navigator.onLine) {
+      Utils.toast('当前离线，无法同步', 'warning');
+      return 0;
+    }
+    this._setSyncStatus('syncing');
+    let count = 0;
+    for (const k of Object.values(this.keys)) {
+      const v = this.get(k);
+      if (v === null || v === undefined) continue;
+      const ok = await SupabaseCfg.pushKey(k, v);
+      if (ok) count++;
+    }
+    this._setSyncStatus('success');
+    setTimeout(() => this._setSyncStatus('idle'), 2000);
+    return count;
+  },
+
+  // 监听网络状态
+  _initNetworkWatcher() {
+    window.addEventListener('online', () => {
+      if (this._syncQueue.size > 0) this._flushSync();
+      else this._setSyncStatus('idle');
+    });
+    window.addEventListener('offline', () => {
+      this._setSyncStatus('offline');
+    });
   },
 };
 

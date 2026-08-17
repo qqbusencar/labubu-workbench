@@ -156,11 +156,11 @@ const Components = {
   },
 
   // 空状态
-  empty({ icon = '🌸', title = '还没有内容哦～', sub = '添加一条记录开始记录吧', hero = false }) {
+  empty({ icon = '🌸', title = '还没有内容哦～', sub = '添加一条记录开始记录吧', hero = false, module = 'default' }) {
     if (hero) {
       return `
-        <div class="empty-labubu-hero">
-          <div class="labubu-portrait">${Utils.labubuImg({ size: 'small' })}</div>
+        <div class="empty-kitty-hero">
+          <div class="kitty-portrait">${Utils.kittyImg({ size: 'small', module, backup: true })}</div>
           <span class="empty-ico" style="font-size:26px;margin-top:14px">${icon}</span>
           <div class="empty-title">${Utils.esc(title)}</div>
           <div class="empty-sub">${Utils.esc(sub)}</div>
@@ -169,7 +169,7 @@ const Components = {
     }
     return `
       <div class="empty-state">
-        <div class="empty-labubu float-anim">${Utils.labubuImg({ size: 'small' })}</div>
+        <div class="empty-kitty float-anim">${Utils.kittyImg({ size: 'small', module, backup: true })}</div>
         <span class="empty-ico">${icon}</span>
         <div class="empty-title">${Utils.esc(title)}</div>
         <div class="empty-sub">${Utils.esc(sub)}</div>
@@ -177,7 +177,7 @@ const Components = {
     `;
   },
 
-  // 拉布布页头大图横幅（替代传统的 page-header）
+  // 模块页头大图横幅（替代传统的 page-header）
   banner({ module = 'fitness', title = '', sub = '', actions = '' }) {
     const iconMap = {
       fitness: { ico: '🧘‍♀️', label: '健身打卡' },
@@ -194,16 +194,16 @@ const Components = {
           <div class="page-sub">${Utils.esc(sub)}</div>
           ${actions ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">${actions}</div>` : ''}
         </div>
-        <div class="module-banner-art">${Utils.labubuImg({ size: 'small' })}</div>
+        <div class="module-banner-art">${Utils.kittyImg({ size: 'small', module })}</div>
       </div>
     `;
   },
 
-  // 拉布布特性卡片（横排 + 立绘 + 文案）
-  featureCard({ title = '', sub = '', icon = '🌸', actions = '' }) {
+  // 特性卡片（横排 + 立绘 + 文案）
+  featureCard({ title = '', sub = '', icon = '🌸', actions = '', module = 'default' }) {
     return `
-      <div class="labubu-feature-card">
-        <div class="labubu-portrait">${Utils.labubuImg({ size: 'small' })}</div>
+      <div class="kitty-feature-card">
+        <div class="kitty-portrait">${Utils.kittyImg({ size: 'small', module })}</div>
         <div class="lfc-text">
           <div class="lfc-title">${icon} ${Utils.esc(title)}</div>
           <div class="lfc-sub">${Utils.esc(sub)}</div>
@@ -214,12 +214,12 @@ const Components = {
   },
 
   // 漂浮小立绘（嵌进卡片角落）
-  floatingLabubu() {
-    return `<div class="floating-labubu">${Utils.labubuImg({ size: 'tiny' })}</div>`;
+  floatingKitty(module = 'default') {
+    return `<div class="floating-kitty">${Utils.kittyImg({ size: 'tiny', module })}</div>`;
   },
 
   // 加载中
-  loading({ text = 'Labubu 正在努力加载...' } = {}) {
+  loading({ text = 'Hello Kitty 正在努力加载...' } = {}) {
     return `<div class="flex flex-center gap-8" style="padding:32px">
       <div class="loading"></div>
       <span style="font-size:13px;color:var(--text-muted)">${Utils.esc(text)}</span>
