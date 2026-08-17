@@ -1532,13 +1532,7 @@ body[data-theme="dark"] .stat-bar-item { background: rgba(255, 255, 255, 0.04); 
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.85);
 }
-/* 健身模块专属：用带内边距的自行车图（kitty-bike-pad-small），Kitty 完整居中、头顶留白 */
-.kitty-feature-card.fitness-card .kitty-portrait .kitty-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
+/* 健身模块专属：blocks 场景图已自带内边距，无需特殊处理 */
 .kitty-feature-card .lfc-text { flex: 1; min-width: 0; }
 .kitty-feature-card .lfc-title {
   font-size: 16px;
