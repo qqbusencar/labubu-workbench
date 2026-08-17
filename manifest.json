@@ -36,7 +36,7 @@
       "short_name": "健身",
       "description": "记录今日运动",
       "url": "./#fitness",
-      "icons": [{ "src": "assets/img/kitty/kitty-bike-tiny.png", "sizes": "any" }]
+      "icons": [{ "src": "assets/img/kitty/kitty-blocks-tiny.png", "sizes": "any" }]
     },
     {
       "name": "学习收获",
