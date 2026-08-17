@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Labubu 治愈工作台" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#b497d6" />
+  <meta name="description" content="Labubu 治愈风个人全能工作台 — 健身 / 养生 / 学习 / 运势 / 资讯" />
+
+  <title>Labubu 治愈工作台 · 你的私人自律空间</title>
+
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="assets/img/labubu-favicon.svg" />
+  <link rel="apple-touch-icon" href="assets/img/labubu-apple-touch.svg" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/modules.css" />
+</head>
+
+<body data-theme="light">
+  <!-- 紫藤花梦幻背景层 -->
+  <div class="bg-layer">
+    <div class="bg-wisteria"></div>
+    <div class="bg-bokeh"></div>
+    <div class="bg-petals" aria-hidden="true">
+      <span class="petal p1">❀</span>
+      <span class="petal p2">✿</span>
+      <span class="petal p3">❀</span>
+      <span class="petal p4">✿</span>
+      <span class="petal p5">❀</span>
+      <span class="petal p6">✿</span>
+    </div>
+  </div>
+
+  <!-- 密码锁屏 -->
+  <div id="lock-screen" class="lock-screen hidden">
+    <div class="lock-bg"></div>
+    <div class="lock-card">
+      <div class="lock-labubu is-img">
+        <img src="assets/img/labubu-card.png" alt="Labubu 治愈立绘" />
+      </div>
+      <h2 class="lock-title">欢迎回到治愈空间</h2>
+      <p class="lock-sub">请输入访问密码，开启今天的温柔时光</p>
+      <input id="lock-password" type="password" placeholder="请输入密码" autocomplete="off" />
+      <button id="lock-unlock" class="btn-primary">解锁 · 进入工作台</button>
+      <button id="lock-skip" class="btn-link">暂不设置密码 · 直接进入</button>
+      <p id="lock-error" class="lock-error hidden">密码不正确，再试一次吧～</p>
+    </div>
+  </div>
+
+  <!-- PC 端左侧导航 -->
+  <aside class="pc-sidebar" aria-label="主导航">
+    <div class="pc-brand">
+      <div class="pc-brand-logo is-img">
+        <img src="assets/img/labubu-tiny.png" alt="Labubu" />
+      </div>
+      <div>
+        <div class="pc-brand-name">Labubu 工作台</div>
+        <div class="pc-brand-sub">治愈 · 自律 · 温柔</div>
+      </div>
+    </div>
+    <nav class="pc-nav">
+      <a href="#fitness" class="pc-nav-item active" data-page="fitness">
+        <span class="nav-ico">🧘‍♀️</span><span class="nav-label">健身打卡</span>
+      </a>
+      <a href="#wellness" class="pc-nav-item" data-page="wellness">
+        <span class="nav-ico">🌿</span><span class="nav-label">养生打卡</span>
+      </a>
+      <a href="#study" class="pc-nav-item" data-page="study">
+        <span class="nav-ico">📚</span><span class="nav-label">学习收获</span>
+      </a>
+      <a href="#fortune" class="pc-nav-item" data-page="fortune">
+        <span class="nav-ico">🌙</span><span class="nav-label">每日运势</span>
+      </a>
+      <a href="#news" class="pc-nav-item" data-page="news">
+        <span class="nav-ico">📰</span><span class="nav-label">信息资讯</span>
+      </a>
+    </nav>
+    <div class="pc-footer">
+      <button class="pc-icon-btn" id="pc-theme-toggle" title="切换主题">
+        <span class="ico">🌗</span>
+      </button>
+      <button class="pc-icon-btn" id="pc-export" title="导出数据">
+        <span class="ico">📤</span>
+      </button>
+      <button class="pc-icon-btn" id="pc-lock" title="设置密码锁">
+        <span class="ico">🔒</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 移动端顶部栏 -->
+  <header class="mobile-header">
+    <div class="mobile-header-left">
+      <div class="mobile-avatar is-img">
+        <img src="assets/img/labubu-tiny.png" alt="Labubu" />
+      </div>
+      <div>
+        <div class="mobile-greet" id="mobile-greet">晚上好～</div>
+        <div class="mobile-date" id="mobile-date"></div>
+      </div>
+    </div>
+    <div class="mobile-header-right">
+      <button class="mobile-icon-btn" id="mobile-theme-toggle" title="主题">🌗</button>
+      <button class="mobile-icon-btn" id="mobile-more" title="更多">⋯</button>
+    </div>
+  </header>
+
+  <!-- 移动端更多菜单 -->
+  <div id="mobile-more-menu" class="mobile-more-menu hidden">
+    <button data-action="export">📤 导出数据</button>
+    <button data-action="lock">🔒 密码锁</button>
+    <button data-action="theme">🌗 切换主题</button>
+    <button data-action="about">💖 关于</button>
+  </div>
+
+  <!-- 主内容区 -->
+  <main class="app-main" id="app-main">
+    <!-- 各页面内容由 JS 注入 -->
+  </main>
+
+  <!-- 移动端底部导航 -->
+  <nav class="bottom-nav" aria-label="底部导航">
+    <a href="#fitness" class="bottom-nav-item active" data-page="fitness">
+      <span class="bottom-ico">🧘‍♀️</span>
+      <span class="bottom-label">健身打卡</span>
+    </a>
+    <a href="#wellness" class="bottom-nav-item" data-page="wellness">
+      <span class="bottom-ico">🌿</span>
+      <span class="bottom-label">养生打卡</span>
+    </a>
+    <a href="#study" class="bottom-nav-item" data-page="study">
+      <span class="bottom-ico">📚</span>
+      <span class="bottom-label">学习收获</span>
+    </a>
+    <a href="#fortune" class="bottom-nav-item" data-page="fortune">
+      <span class="bottom-ico">🌙</span>
+      <span class="bottom-label">每日运势</span>
+    </a>
+    <a href="#news" class="bottom-nav-item" data-page="news">
+      <span class="bottom-ico">📰</span>
+      <span class="bottom-label">信息资讯</span>
+    </a>
+  </nav>
+
+  <!-- Toast 提示 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Modal 容器 -->
+  <div id="modal-root"></div>
+
+  <script src="js/db.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/components.js"></script>
+  <script src="modules/fitness.js"></script>
+  <script src="modules/wellness.js"></script>
+  <script src="modules/study.js"></script>
+  <script src="modules/fortune.js"></script>
+  <script src="modules/news.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/sw-register.js"></script>
+</body>
+</html>

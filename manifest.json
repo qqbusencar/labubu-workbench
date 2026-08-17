@@ -1,0 +1,62 @@
+{
+  "name": "Labubu 治愈工作台",
+  "short_name": "Labubu 工作台",
+  "description": "女生专属、Labubu 治愈梦幻风的全能自律工作台：健身 / 养生 / 学习 / 运势 / 资讯",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#faf6fb",
+  "theme_color": "#b497d6",
+  "categories": ["lifestyle", "productivity", "health", "education"],
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "assets/img/labubu-favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/img/labubu-apple-touch.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "健身打卡",
+      "short_name": "健身",
+      "description": "记录今日运动",
+      "url": "./#fitness",
+      "icons": [{ "src": "assets/img/labubu-favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "学习收获",
+      "short_name": "学习",
+      "description": "每日英语 / 看书打卡",
+      "url": "./#study",
+      "icons": [{ "src": "assets/img/labubu-favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "每日运势",
+      "short_name": "运势",
+      "description": "查看今日运势",
+      "url": "./#fortune",
+      "icons": [{ "src": "assets/img/labubu-favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

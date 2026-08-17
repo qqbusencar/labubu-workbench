@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="bg180" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d9c2ec"/>
+      <stop offset="50%" stop-color="#ffc6d5"/>
+      <stop offset="100%" stop-color="#b8d8e8"/>
+    </linearGradient>
+    <radialGradient id="eyeGrad180" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#b497d6"/>
+      <stop offset="100%" stop-color="#6e4ca8"/>
+    </radialGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#bg180)"/>
+  <ellipse cx="90" cy="125" rx="50" ry="35" fill="#fff8fb"/>
+  <path d="M62 108 Q90 100 118 108 L122 150 Q90 158 58 150 Z" fill="#a8c3e0"/>
+  <path d="M79 105 L79 150 M101 105 L101 150" stroke="#7da2c9" stroke-width="1.5" fill="none"/>
+  <circle cx="84" cy="118" r="2.5" fill="#f7d4e3"/>
+  <circle cx="96" cy="118" r="2.5" fill="#f7d4e3"/>
+  <ellipse cx="90" cy="78" rx="56" ry="50" fill="#fff8fb"/>
+  <ellipse cx="48" cy="40" rx="13" ry="26" fill="#fff8fb" transform="rotate(-20 48 40)"/>
+  <ellipse cx="132" cy="40" rx="13" ry="26" fill="#fff8fb" transform="rotate(20 132 40)"/>
+  <ellipse cx="50" cy="44" rx="6" ry="14" fill="#ffd5e4" transform="rotate(-20 50 44)"/>
+  <ellipse cx="130" cy="44" rx="6" ry="14" fill="#ffd5e4" transform="rotate(20 130 44)"/>
+  <g fill="#fff">
+    <path d="M53 26 L58 36 L63 26 Z"/>
+    <path d="M117 26 L122 36 L127 26 Z"/>
+  </g>
+  <ellipse cx="60" cy="92" rx="10" ry="6" fill="#ffc6d5" opacity="0.8"/>
+  <ellipse cx="120" cy="92" rx="10" ry="6" fill="#ffc6d5" opacity="0.8"/>
+  <ellipse cx="72" cy="78" rx="11" ry="14" fill="url(#eyeGrad180)"/>
+  <ellipse cx="108" cy="78" rx="11" ry="14" fill="url(#eyeGrad180)"/>
+  <circle cx="75" cy="73" r="3" fill="#fff"/>
+  <circle cx="111" cy="73" r="3" fill="#fff"/>
+  <circle cx="70" cy="83" r="1.5" fill="#fff"/>
+  <circle cx="106" cy="83" r="1.5" fill="#fff"/>
+  <path d="M80 105 Q90 113 100 105" stroke="#a87cae" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>
