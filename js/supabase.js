@@ -20,6 +20,7 @@ const SupabaseCfg = {
   client: null,
   user: null,
   listeners: new Set(),
+  lastError: null,       // 最近一次错误（用于 UI 诊断展示）
   STORAGE_KEY: 'labubu_wb_supabase_cfg',   // 本地保存的凭据（弹窗里配置）
 
   // 从本地读取已保存的凭据，覆盖默认占位符
@@ -50,6 +51,7 @@ const SupabaseCfg = {
 
   // 初始化（启动时调用）
   async init() {
+    this.lastError = null;
     // 优先使用本地保存的凭据（用户在弹窗中配置过）
     this._loadSavedConfig();
 
@@ -65,40 +67,103 @@ const SupabaseCfg = {
       return false;
     }
 
-    // 加载 SDK
+    // 加载 SDK（多 CDN 兜底）
     try {
       if (!window.supabase) {
         await this._loadSdk();
       }
+      if (!window.supabase) throw new Error('window.supabase 未定义');
       this.client = window.supabase.createClient(this.URL, this.ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true },
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,   // 自动从回调 URL 的 #access_token（implicit）或 ?code 建立会话
+          flowType: 'implicit',       // 隐式流：会话直接随回调 URL 返回，不依赖本地 code_verifier，清缓存/iOS 更稳
+        },
       });
       this.ENABLED = true;
-      // 读取已登录用户
-      const { data: { session } } = await this.client.auth.getSession();
-      this.user = session?.user || null;
-      // 监听登录态变化
+
+      // 关键：先注册监听，再读会话，避免错过 SIGNED_IN 事件
       this.client.auth.onAuthStateChange((_event, session) => {
         this.user = session?.user || null;
         this._notify();
       });
-      console.info('[Supabase] 已连接:', this.URL);
+
+      // 恢复已持久化的会话（之前登录过、未清缓存时直接复用）
+      const { data: { session } } = await this.client.auth.getSession();
+      this.user = session?.user || null;
+
+      // 处理 OAuth 回调：GitHub 跳回带 ?code=... → 显式交换为会话（这是修复"登录后无状态"的核心）
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const code = urlParams.get('code') || hashParams.get('code');
+      if (code) {
+        try {
+          const { error } = await this.client.auth.exchangeCodeForSession(window.location.href);
+          if (error) {
+            this.lastError = 'OAuth 交换失败：' + (error.message || error);
+          } else {
+            const { data: { session: s2 } } = await this.client.auth.getSession();
+            this.user = s2?.user || null;
+          }
+        } catch (e) {
+          this.lastError = 'OAuth 交换异常：' + (e.message || e);
+        }
+        this._cleanUrl();
+      }
+
+      // 若 URL 带 ?error（如 redirect_to 未配置 / 用户拒绝授权）→ 显式报错，不再静默
+      const errCode = urlParams.get('error') || hashParams.get('error');
+      if (errCode) {
+        this.lastError = 'OAuth 返回错误：' + (urlParams.get('error_description') || hashParams.get('error_description') || errCode);
+        this._cleanUrl();
+      }
+
+      console.info('[Supabase] 已连接:', this.URL, 'user:', this.user?.email || null);
       return true;
     } catch (e) {
       console.error('[Supabase] 初始化失败:', e);
       this.ENABLED = false;
+      this.lastError = '初始化失败：' + (e.message || e);
       return false;
     }
   },
 
-  _loadSdk() {
+  // 多 CDN 兜底加载 SDK（jsdelivr → unpkg），任一成功即可
+  async _loadSdk() {
+    const urls = [
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+      'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    ];
+    let lastErr;
+    for (const u of urls) {
+      try {
+        await this._injectScript(u);
+        if (window.supabase) return;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw new Error('Supabase SDK 加载失败（CDN 不可达）：' + (lastErr?.message || ''));
+  },
+
+  _injectScript(src) {
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = this.SDK_URL;
-      s.onload = resolve;
-      s.onerror = reject;
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('加载失败 ' + src));
       document.head.appendChild(s);
     });
+  },
+
+  // 交换完成后清理 URL 中的 ?code / ?error 以及 #access_token，避免刷新重复触发 & 地址栏整洁
+  _cleanUrl() {
+    try {
+      const url = new URL(window.location.href);
+      ['code', 'state', 'error', 'error_description'].forEach(k => url.searchParams.delete(k));
+      history.replaceState(null, '', url.pathname + url.search); // 同时丢弃 #access_token 等片段
+    } catch (e) { /* noop */ }
   },
 
   onAuthChange(fn) {

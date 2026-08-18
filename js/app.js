@@ -304,6 +304,9 @@ const App = {
 
     // 初始化 Supabase 客户端（如果凭据已配置）
     await SupabaseCfg.init();
+    if (SupabaseCfg.lastError) {
+      Utils.toast('云同步诊断：' + SupabaseCfg.lastError, 'error');
+    }
 
     // 监听登录状态变化 → 同步状态徽章 + 登录后立刻补推本地数据
     const refreshBadge = () => this.refreshSyncBadge();
@@ -504,6 +507,9 @@ const App = {
       title: '☁️ 云同步登录',
       body: `
         <div id="auth-form">
+          <div class="text-xs" style="background:rgba(255,143,188,0.08);border-radius:10px;padding:8px 10px;margin-bottom:10px;color:var(--text-muted);word-break:break-all">
+            🔧 诊断：SDK <b>${window.supabase ? '✅' : '❌'}</b> · 云同步 <b>${SupabaseCfg.ENABLED ? '已启用' : '未启用'}</b>${SupabaseCfg.lastError ? ' · ⚠️ ' + Utils.esc(SupabaseCfg.lastError) : ''}
+          </div>
           <p class="mb-12 text-sm text-secondary">推荐用 GitHub 一键登录（你的 Supabase 账户即 GitHub 账号）；也可下方用邮箱注册。</p>
           <button class="btn-primary btn-block mb-12" data-act="github" style="background:linear-gradient(135deg,#24292e,#404a56);color:#fff">🐙 使用 GitHub 登录</button>
           <div style="text-align:center;color:var(--text-muted);font-size:12px;margin-bottom:10px">— 或使用邮箱 —</div>
