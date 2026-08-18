@@ -305,9 +305,19 @@ const App = {
     // 初始化 Supabase 客户端（如果凭据已配置）
     await SupabaseCfg.init();
 
-    // 监听登录状态变化 → 同步状态徽章
+    // 监听登录状态变化 → 同步状态徽章 + 登录后立刻补推本地数据
     const refreshBadge = () => this.refreshSyncBadge();
-    SupabaseCfg.onAuthChange(refreshBadge);
+    SupabaseCfg.onAuthChange((u) => {
+      refreshBadge();
+      // 关键修复：会话就绪（含 GitHub OAuth 重定向后）后立即把本地数据推到云端，
+      // 覆盖 init() 时 getSession 尚未拿到会话、导致启动全量推送被跳过的情况
+      if (u) {
+        DB.pushAllToCloud().then((n) => {
+          if (n > 0) Utils.toast(`已同步 ${n} 项本地数据到云端 ☁️`, 'success');
+          this.refreshSyncBadge();
+        });
+      }
+    });
     DB.onSyncChange(refreshBadge);
 
     // 已登录则拉取云端数据，并把本地已有数据推送到云端（GitHub OAuth 登录也走这里）

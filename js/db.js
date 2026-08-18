@@ -89,12 +89,15 @@ const DB = {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   },
 
-  // 同步日志（模拟云同步队列）
+  // 同步日志（直接写 localStorage，避免与 DB.set → logSync 形成无限递归）
   logSync(key, op) {
-    const log = this.get('sync_log', []);
-    log.push({ key, op, ts: Date.now() });
-    if (log.length > 200) log.splice(0, log.length - 200);
-    this.set('sync_log', log);
+    try {
+      const raw = localStorage.getItem(this.PREFIX + 'sync_log');
+      const log = raw ? JSON.parse(raw) : [];
+      log.push({ key, op, ts: Date.now() });
+      if (log.length > 200) log.splice(0, log.length - 200);
+      localStorage.setItem(this.PREFIX + 'sync_log', JSON.stringify(log));
+    } catch (e) { /* ignore */ }
   },
 
   // 今日 key（YYYY-MM-DD）
@@ -210,6 +213,21 @@ const DB = {
   _syncListeners: new Set(),      // 同步状态订阅
   _syncStatus: 'idle',            // idle / syncing / success / error / offline
 
+  // 脏 key 持久化：即使关闭标签页 / 清缓存前未推送完成，下次启动也会补推
+  DIRTY_KEY: 'labubu_wb_sync_dirty',
+  _dirtySet: null,
+  _loadDirty() {
+    if (this._dirtySet) return this._dirtySet;
+    try { this._dirtySet = new Set(JSON.parse(localStorage.getItem(this.DIRTY_KEY) || '[]')); }
+    catch { this._dirtySet = new Set(); }
+    return this._dirtySet;
+  },
+  _saveDirty() {
+    try { localStorage.setItem(this.DIRTY_KEY, JSON.stringify([...this._loadDirty()])); } catch { /* ignore */ }
+  },
+  _markDirty(key) { this._loadDirty().add(key); this._saveDirty(); },
+  _clearDirty(key) { this._loadDirty().delete(key); this._saveDirty(); },
+
   get syncStatus() { return this._syncStatus; },
 
   onSyncChange(fn) {
@@ -224,44 +242,74 @@ const DB = {
     });
   },
 
-  // 触发同步某个 key（防抖 1.5s 合并多次写入）
+  // 触发同步某个 key：
+  // 1) 无论如何先标记脏（即使尚未登录也保留，登录后补推）
+  // 2) 已登录且在线时防抖 800ms 推送（合并多次写入）
   _enqueueSync(key) {
+    this._markDirty(key);
     if (!SupabaseCfg.ENABLED || !SupabaseCfg.user) return;
     this._syncQueue.set(key, true);
     if (this._syncTimer) clearTimeout(this._syncTimer);
-    this._syncTimer = setTimeout(() => this._flushSync(), 1500);
+    this._syncTimer = setTimeout(() => this._flushSync(), 800);
   },
 
-  // 执行队列中的同步
+  // 执行队列中的同步（合并：内存队列 + 持久化脏 key）
   async _flushSync() {
     if (!SupabaseCfg.ENABLED || !SupabaseCfg.user) return;
-    if (this._syncQueue.size === 0) return;
     if (!navigator.onLine) {
       this._setSyncStatus('offline');
       return;
     }
     this._setSyncStatus('syncing');
-    const keys = Array.from(this._syncQueue.keys());
+    const keys = new Set(this._syncQueue.keys());
+    this._loadDirty().forEach(k => keys.add(k));
     this._syncQueue.clear();
+    if (keys.size === 0) { this._setSyncStatus('idle'); return; }
     let hasError = false;
     for (const k of keys) {
       const value = this.get(k);
+      if (value === null || value === undefined) { this._clearDirty(k); continue; }
       const ok = await SupabaseCfg.pushKey(k, value);
-      if (!ok) {
+      if (ok) {
+        this._clearDirty(k);
+      } else {
         hasError = true;
-        // 失败时重新入队，并在 10 秒后自愈重试（应对网络抖动 / 登录态延迟）
-        this._syncQueue.set(k, true);
+        this._syncQueue.set(k, true);   // 失败：保留脏标记，10s 后自愈
+        this._markDirty(k);
       }
     }
     this._setSyncStatus(hasError ? 'error' : 'success');
     if (hasError) {
-      // 自愈：10 秒后若仍在队列则重试一次（连续失败也不会卡死）
+      // 自愈：10 秒后若仍在队列则重试一次（应对网络抖动 / 登录态延迟）
       setTimeout(() => { if (this._syncQueue.size > 0) this._flushSync(); }, 10000);
     }
     // 3 秒后回到 idle
     setTimeout(() => {
       if (this._syncStatus !== 'syncing') this._setSyncStatus('idle');
     }, 3000);
+  },
+
+  // 立即推送所有脏 / 待推 key（页面隐藏或关闭前调用，不再等待防抖）
+  flushNow() {
+    if (!SupabaseCfg.ENABLED || !SupabaseCfg.user || !navigator.onLine) return;
+    const keys = new Set(this._syncQueue.keys());
+    this._loadDirty().forEach(k => keys.add(k));
+    this._syncQueue.clear();
+    if (keys.size === 0) return;
+    this._setSyncStatus('syncing');
+    let pending = keys.size;
+    let hasError = false;
+    keys.forEach(async (k) => {
+      const value = this.get(k);
+      if (value === null || value === undefined) {
+        this._clearDirty(k);
+      } else {
+        const ok = await SupabaseCfg.pushKey(k, value);
+        if (ok) this._clearDirty(k);
+        else { hasError = true; this._markDirty(k); }
+      }
+      if (--pending === 0) this._setSyncStatus(hasError ? 'error' : 'success');
+    });
   },
 
   // 启动时拉取云端数据并合并到本地
@@ -314,15 +362,26 @@ const DB = {
     return count;
   },
 
-  // 监听网络状态
+  // 监听网络状态 + 启动时补推
   _initNetworkWatcher() {
     window.addEventListener('online', () => {
-      if (this._syncQueue.size > 0) this._flushSync();
+      if (this._syncQueue.size > 0 || this._loadDirty().size > 0) this._flushSync();
       else this._setSyncStatus('idle');
     });
     window.addEventListener('offline', () => {
       this._setSyncStatus('offline');
     });
+    // 页面隐藏 / 关闭前：立即把未推送的数据刷到云端（避免防抖未触发就丢数据）
+    const flushOnLeave = () => this.flushNow();
+    window.addEventListener('pagehide', flushOnLeave);
+    window.addEventListener('beforeunload', flushOnLeave);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.flushNow();
+    });
+    // 启动即补推历史脏 key（例如上次关闭过快未推送完成的数据）
+    if (this._loadDirty().size > 0) {
+      setTimeout(() => this._flushSync(), 1500);
+    }
   },
 };
 
