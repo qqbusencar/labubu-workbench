@@ -1012,6 +1012,90 @@ body {
 /* ============================================================
    同步状态徽章
    ============================================================ */
+/* 移动端云同步按钮 — 最显眼的登录入口 */
+.mobile-cloud-btn {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  margin-right: 4px;
+}
+.mobile-cloud-btn .sync-badge {
+  font-size: 12px;
+  padding: 6px 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 143, 188, 0.35);
+  border: 1px solid rgba(255, 143, 188, 0.4);
+}
+.mobile-cloud-btn.is-pulse .sync-badge {
+  animation: cloud-breathe 2.2s ease-in-out infinite;
+}
+@keyframes cloud-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(255, 143, 188, 0.35); }
+  50%      { transform: scale(1.06); box-shadow: 0 4px 14px rgba(255, 143, 188, 0.55); }
+}
+.mobile-cloud-btn:active .sync-badge { transform: scale(0.95); }
+
+/* 页面内云同步横幅（健身页最显眼的登录卡） */
+.cloud-banner-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(255, 198, 213, 0.55) 0%, rgba(255, 214, 235, 0.75) 50%, rgba(184, 216, 232, 0.55) 100%);
+  border: 1px solid rgba(255, 143, 188, 0.3);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+.cloud-banner-card.cloud-logged-in {
+  background: linear-gradient(135deg, rgba(165, 214, 167, 0.45) 0%, rgba(200, 230, 201, 0.7) 100%);
+  border-color: rgba(102, 187, 106, 0.35);
+}
+.cloud-banner-icon {
+  font-size: 36px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+}
+.cloud-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+.cloud-banner-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.cloud-banner-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  word-break: break-all;
+}
+.cloud-banner-action {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #24292e, #404a56);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(36, 41, 46, 0.25);
+  white-space: nowrap;
+}
+.cloud-banner-action:active { transform: translateY(1px); }
+.cloud-banner-action.is-light {
+  background: var(--gradient-primary);
+  color: var(--text-primary);
+}
+
 .sync-badge {
   display: inline-flex;
   align-items: center;

@@ -55,6 +55,8 @@ const Fitness = {
           `
         })}
 
+        ${this._renderCloudBanner()}
+
         <div class="kitty-feature-card" style="margin-bottom:16px">
           <div class="kitty-portrait" style="background:linear-gradient(135deg,#c8e6c9,#b8d8e8)">${Utils.kittyImg({ size: 'small', module: 'fitness' })}</div>
           <div class="lfc-text">
@@ -138,6 +140,61 @@ const Fitness = {
     this.renderTodayList();
     this.renderChart();
     this.bindEvents();
+    this.bindCloudBanner();
+  },
+
+  // 页面顶部云同步横幅卡 — 让用户一眼看到是否已登录 GitHub
+  _renderCloudBanner() {
+    const sb = window.SupabaseCfg || {};
+    const loggedIn = !!(sb.ENABLED && sb.user);
+    const email = sb.user?.email || sb.user?.user_metadata?.user_name || sb.user?.user_metadata?.preferred_username || '';
+    if (loggedIn) {
+      return `
+        <div class="cloud-banner-card cloud-logged-in" data-sync-banner>
+          <div class="cloud-banner-icon">☁️</div>
+          <div class="cloud-banner-text">
+            <div class="cloud-banner-title">✅ 已登录 GitHub · 数据自动同步中</div>
+            <div class="cloud-banner-sub">账号：${this._esc(email)} · 所有打卡记录将实时备份到云端</div>
+          </div>
+          <button class="cloud-banner-action is-light" data-cloud-act="manage">⚙️ 管理</button>
+        </div>
+      `;
+    }
+    // 未登录或未配置 → 显示显眼的引导
+    if (!sb.ENABLED) {
+      return `
+        <div class="cloud-banner-card" data-sync-banner>
+          <div class="cloud-banner-icon">☁️</div>
+          <div class="cloud-banner-text">
+            <div class="cloud-banner-title">☁️ 启用云同步 · 跨设备永不丢失</div>
+            <div class="cloud-banner-sub">首次启用约 5 分钟，之后登录即自动备份</div>
+          </div>
+          <button class="cloud-banner-action" data-cloud-act="enable">🔧 启用</button>
+        </div>
+      `;
+    }
+    return `
+      <div class="cloud-banner-card" data-sync-banner style="animation: cloud-breathe 2.2s ease-in-out infinite">
+        <div class="cloud-banner-icon">🐙</div>
+        <div class="cloud-banner-text">
+          <div class="cloud-banner-title">☁️ 一键登录 GitHub · 立即同步数据</div>
+          <div class="cloud-banner-sub">授权后所有健身、养生打卡自动备份到云端，换设备也找得回</div>
+        </div>
+        <button class="cloud-banner-action" data-cloud-act="github">🐙 登录</button>
+      </div>
+    `;
+  },
+
+  _esc(s) { return String(s || '').replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c])); },
+
+  bindCloudBanner() {
+    document.querySelectorAll('[data-cloud-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const app = window.App;
+        if (!app || !app.openCloudDialog) { Utils.toast('请稍后再试'); return; }
+        app.openCloudDialog();
+      });
+    });
   },
 
   allItems() {
