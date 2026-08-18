@@ -249,11 +249,15 @@ const DB = {
       const ok = await SupabaseCfg.pushKey(k, value);
       if (!ok) {
         hasError = true;
-        // 失败时重新入队
+        // 失败时重新入队，并在 10 秒后自愈重试（应对网络抖动 / 登录态延迟）
         this._syncQueue.set(k, true);
       }
     }
     this._setSyncStatus(hasError ? 'error' : 'success');
+    if (hasError) {
+      // 自愈：10 秒后若仍在队列则重试一次（连续失败也不会卡死）
+      setTimeout(() => { if (this._syncQueue.size > 0) this._flushSync(); }, 10000);
+    }
     // 3 秒后回到 idle
     setTimeout(() => {
       if (this._syncStatus !== 'syncing') this._setSyncStatus('idle');

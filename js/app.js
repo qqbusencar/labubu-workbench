@@ -310,12 +310,17 @@ const App = {
     SupabaseCfg.onAuthChange(refreshBadge);
     DB.onSyncChange(refreshBadge);
 
-    // 已登录则拉取云端数据
+    // 已登录则拉取云端数据，并把本地已有数据推送到云端（GitHub OAuth 登录也走这里）
     if (SupabaseCfg.user) {
       const merged = await DB.pullFromCloud();
       if (merged > 0) {
         Utils.toast(`已从云端恢复 ${merged} 项数据 💖`, 'success');
         this.go(this.currentPage);
+      }
+      // 关键修复：登录后把本地已有数据（含登录前/登录瞬间打卡的记录）全量推送到云端
+      const pushed = await DB.pushAllToCloud();
+      if (pushed > 0 && merged === 0) {
+        Utils.toast(`已同步 ${pushed} 项本地数据到云端 ☁️`, 'success');
       }
     }
 
