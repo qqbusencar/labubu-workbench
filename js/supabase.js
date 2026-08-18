@@ -11,7 +11,7 @@
 
 const SupabaseCfg = {
   // ========== 在这里填入你的 Supabase 凭据 ==========
-  URL: 'https://rmldjztswbfdedwaawhq.supabase.com',  // 你的 Project URL
+  URL: 'https://rmldjztswbfdedwaawhq.supabase.co',  // 你的 Project URL
   ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtbGRqenRzd2JmZGVkd2Fhd2hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2OTQ5NjYsImV4cCI6MjEwMjI3MDk2Nn0.w79ZeC3JhWV4WQbKBQSwXk2AerxfzsyM5p-kd5cgnwI',  // 你的 anon public key
   // ==================================================
 
