@@ -11,8 +11,8 @@
 
 const SupabaseCfg = {
   // ========== 在这里填入你的 Supabase 凭据 ==========
-  URL: 'https://YOUR-PROJECT-REF.supabase.co',     // 改成你的 Project URL
-  ANON_KEY: 'YOUR-ANON-PUBLIC-KEY',                  // 改成你的 anon public key
+  URL: 'https://rmldjztswbfdedwaawhq.supabase.com',  // 你的 Project URL
+  ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtbGRqenRzd2JmZGVkd2Fhd2hxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2OTQ5NjYsImV4cCI6MjEwMjI3MDk2Nn0.w79ZeC3JhWV4WQbKBQSwXk2AerxfzsyM5p-kd5cgnwI',  // 你的 anon public key
   // ==================================================
 
   ENABLED: false,        // 凭据填好后自动变为 true
