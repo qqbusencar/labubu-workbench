@@ -24,7 +24,11 @@ jobs:
           node-version: '20'
 
       - name: 部署到 Surge（自动）
-        if: ${{ secrets.SURGE_TOKEN != '' }}
-        run: npx --yes surge . publish --token "$SURGE_TOKEN"
         env:
           SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+        run: |
+          if [ -z "$SURGE_TOKEN" ]; then
+            echo "未设置 SURGE_TOKEN，跳过部署（如需自动上线请在仓库 Settings→Secrets 添加 SURGE_TOKEN）。"
+            exit 0
+          fi
+          npx --yes surge . publish --token "$SURGE_TOKEN"

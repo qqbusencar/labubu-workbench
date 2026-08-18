@@ -15,8 +15,6 @@ permissions:
 jobs:
   sync-schema:
     runs-on: ubuntu-latest
-    # 没配置 SUPABASE_DB_URL 时自动跳过（不会报错变红）
-    if: ${{ secrets.SUPABASE_DB_URL != '' }}
     steps:
       - name: Checkout 代码
         uses: actions/checkout@v4
@@ -27,4 +25,9 @@ jobs:
       - name: 应用 schema.sql 到 Supabase
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=0 -f schema.sql
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "未设置 SUPABASE_DB_URL，跳过（如需自动建表请在仓库 Settings→Secrets 添加 SUPABASE_DB_URL）。"
+            exit 0
+          fi
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=0 -f schema.sql
