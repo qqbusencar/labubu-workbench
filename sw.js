@@ -1,7 +1,7 @@
 /* Hello Kitty 治愈工作台 — Service Worker
    离线优先缓存策略 + Kitty 立绘缓存 */
 
-const CACHE_NAME = 'kitty-wb-v2.0.0';
+const CACHE_NAME = 'kitty-wb-v2.1.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -81,30 +81,65 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// 脚本 / 网页 / JSON：网络优先（保证每次拿到最新代码，部署即生效，不被旧缓存坑）
+// 图片 / 字体：缓存优先（这些资源很少变，离线也好用）
+function isFastChanging(request) {
+  const url = request.url;
+  const path = url.pathname;
+  return request.mode === 'navigate' ||
+         path.endsWith('.js') ||
+         path.endsWith('.html') ||
+         path.endsWith('.json') ||
+         path.endsWith('.css');
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const req = event.request;
+
+  // 跨域请求（如 supabase.co / jsdelivr）一律直连，不进缓存，避免被旧响应误导
+  if (new URL(req.url).origin !== self.location.origin) {
+    event.respondWith(fetch(req).catch(() => caches.match('./index.html')));
+    return;
+  }
+
+  if (isFastChanging(req)) {
+    // 网络优先 + 后台回填缓存
+    event.respondWith(
+      fetch(req).then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(c => c.put(req, clone));
+        }
+        return response;
+      }).catch(() => {
+        return caches.match(req).then((cached) => {
+          return cached || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error());
+        });
+      })
+    );
+    return;
+  }
+
+  // 图片等：缓存优先 + 后台更新
   event.respondWith(
-    caches.match(event.request).then((cached) => {
+    caches.match(req).then((cached) => {
       if (cached) {
-        // 后台更新缓存
-        fetch(event.request).then((response) => {
+        fetch(req).then((response) => {
           if (response && response.status === 200) {
-            caches.open(CACHE_NAME).then(c => c.put(event.request, response));
+            caches.open(CACHE_NAME).then(c => c.put(req, response));
           }
         }).catch(() => {});
         return cached;
       }
-      return fetch(event.request).then((response) => {
-        if (response && response.status === 200 && response.type === 'basic') {
+      return fetch(req).then((response) => {
+        if (response && response.status === 200) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          caches.open(CACHE_NAME).then(c => c.put(req, clone));
         }
         return response;
       }).catch(() => {
-        // 离线降级
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
+        if (req.mode === 'navigate') return caches.match('./index.html');
       });
     })
   );
