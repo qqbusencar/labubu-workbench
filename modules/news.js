@@ -13,10 +13,8 @@
 
 const News = {
   state: {
-    tab: 'morning',      // morning / review / hot / watchlist / kanpan / qianli / redian / caozuo / zuot / xuangu / guize
+    tab: 'morning',      // morning / review / hot
     activeCat: 'all',
-    kanpanTab: 'all',    // all / up / down
-    kanpanSearch: '',
   },
 
   // 模拟大盘数据（保留原有）
@@ -72,80 +70,12 @@ const News = {
     { id: 'h8', title: '宠物经济崛起 市场规模突破 3000 亿', source: '消费资讯', summary: '宠物经济市场快速崛起，相关产业链市场规模已突破 3000 亿元，年复合增长率超过 20%。', category: 'life' },
   ],
 
-  defaultWatchlist: [
-    { code: '600519', name: '贵州茅台', price: 1680.50, change: -12.30, changePct: -0.73 },
-    { code: '000858', name: '五粮液', price: 145.20, change: 2.10, changePct: 1.47 },
-    { code: '300750', name: '宁德时代', price: 215.80, change: 4.20, changePct: 1.99 },
-    { code: '002594', name: '比亚迪', price: 245.60, change: 3.80, changePct: 1.57 },
-  ],
-
-  // ============================================================
-  // 看盘模块 — 8 只关注标的（吴富贵战法：右侧买点 + 量价突破 + 短线爆发）
-  // ============================================================
-  kanpanStocks: () => {
-    const today = DB.todayKey();
-    const cache = DB.get('kanpan_' + today);
-    if (cache) return cache;
-    // 生成 8 只标的的当日快照 + 模拟信号
-    const seed = today.split('-').reduce((s, p) => s + parseInt(p), 0) ^ 0xA1;
-    const rng = mulberry32(seed);
-    const stocks = [
-      { code: '300750', name: '宁德时代', sector: '锂电' },
-      { code: '002594', name: '比亚迪', sector: '新能源车' },
-      { code: '300059', name: '东方财富', sector: '互联网券商' },
-      { code: '600519', name: '贵州茅台', sector: '白酒' },
-      { code: '000858', name: '五粮液', sector: '白酒' },
-      { code: '300274', name: '阳光电源', sector: '光伏储能' },
-      { code: '002371', name: '北方华创', sector: '半导体设备' },
-      { code: '300015', name: '爱尔眼科', sector: '医疗服务' },
-    ];
-    stocks.forEach(s => {
-      const basePrice = 30 + rng() * 200;
-      const changePct = +(rng() * 8 - 3).toFixed(2);
-      const change = +(basePrice * changePct / 100).toFixed(2);
-      s.price = +basePrice.toFixed(2);
-      s.changePct = changePct;
-      s.change = change;
-      // 信号逻辑
-      const signalRoll = rng();
-      if (s.changePct > 2 && signalRoll > 0.3) {
-        s.signal = '今日上车';
-        s.signalType = 'up';
-        s.tier = rng() > 0.7 ? 's' : 'a';
-      } else if (s.changePct < -1 && signalRoll > 0.5) {
-        s.signal = '今日下车';
-        s.signalType = 'down';
-        s.tier = 'b';
-      } else if (rng() > 0.85) {
-        s.signal = '右侧买点';
-        s.signalType = 'buy';
-        s.tier = 's';
-      } else if (rng() > 0.85) {
-        s.signal = '强势拉升';
-        s.signalType = 'strong';
-      } else if (rng() > 0.85) {
-        s.signal = '持有观望';
-        s.signalType = 'hold';
-      } else {
-        s.signal = '观察中';
-        s.signalType = 'wait';
-      }
-      s.captured = s.signalType === 'up' || s.signalType === 'buy';
-    });
-    DB.set('kanpan_' + today, stocks);
-    return stocks;
-  },
-
   /* ---------- 主页面 ---------- */
   mount(container) {
     const tabMap = {
-      morning: '每日早报', review: '市场复盘', hot: '7×24 热点', watchlist: '自选股',
-      kanpan: '看盘', qianli: '潜力', redian: '热点', caozuo: '操作', zuot: '做T', xuangu: '选股', guize: '规则',
+      morning: '每日早报', review: '市场复盘', hot: '7×24 热点',
     };
-    const isKanpanFamily = ['kanpan', 'qianli', 'redian', 'caozuo', 'zuot', 'xuangu', 'guize'].includes(this.state.tab);
-    const newsCount = isKanpanFamily
-      ? this.kanpanStocks().length
-      : { morning: this.morningBrief.length, review: this.marketReview.length, hot: this.hotNews.length, watchlist: DB.get('news_watchlist', this.defaultWatchlist).length }[this.state.tab] || 0;
+    const newsCount = { morning: this.morningBrief.length, review: this.marketReview.length, hot: this.hotNews.length }[this.state.tab] || 0;
 
     const tabLabel = tabMap[this.state.tab] || '资讯';
 
@@ -154,22 +84,22 @@ const News = {
         ${Components.banner({
           module: 'news',
           title: '信息资讯',
-          sub: '实时市场 · 全网热点 · 短线看盘',
+          sub: '每日早报 · 市场复盘 · 全网热点',
           actions: `
             <span class="tag btn-soft" style="margin-left:0">⏰ ${tabLabel}</span>
-            ${this.state.tab !== 'kanpan' ? `<button class="btn-primary" id="news-refresh">🔄 刷新</button>` : `<button class="btn-primary" id="kanpan-capture">⚡ 一键抓取</button>`}
+            <button class="btn-primary" id="news-refresh">🔄 刷新</button>
           `
         })}
 
         <div class="kitty-feature-card" style="margin-bottom:16px">
           <div class="kitty-portrait" style="background:linear-gradient(135deg,#cfe8ea,#d9c2ec)">${Utils.kittyImg({ size: 'small', module: 'news' })}</div>
           <div class="lfc-text">
-            <div class="lfc-title">${isKanpanFamily ? `📈 ${tabLabel} · ${newsCount} 只关注标的` : `📰 ${tabLabel} · ${newsCount} 条要点`}</div>
+            <div class="lfc-title">📰 ${tabLabel} · ${newsCount} 条要点</div>
             <div class="lfc-sub">所有资讯仅供信息展示，不构成任何投资建议，决策请独立思考～</div>
           </div>
         </div>
 
-        ${!isKanpanFamily ? `
+        ${`
           <div class="market-strip">
             ${Object.values(this.marketData()).map(m => `
               <div class="market-cell">
@@ -181,14 +111,12 @@ const News = {
               </div>
             `).join('')}
           </div>
-        ` : ''}
+        `}
 
         <div class="news-tabs">
           <div class="news-tab ${this.state.tab === 'morning' ? 'active' : ''}" data-ntab="morning">每日早报</div>
           <div class="news-tab ${this.state.tab === 'review' ? 'active' : ''}" data-ntab="review">市场复盘</div>
           <div class="news-tab ${this.state.tab === 'hot' ? 'active' : ''}" data-ntab="hot">7×24 热点</div>
-          <div class="news-tab ${this.state.tab === 'watchlist' ? 'active' : ''}" data-ntab="watchlist">自选股</div>
-          <div class="news-tab ${this.state.tab === 'kanpan' ? 'active' : ''}" data-ntab="kanpan">📈 看盘</div>
         </div>
 
         <div id="news-content"></div>
@@ -203,8 +131,6 @@ const News = {
     if (this.state.tab === 'morning') this.renderMorning();
     else if (this.state.tab === 'review') this.renderReview();
     else if (this.state.tab === 'hot') this.renderHot();
-    else if (this.state.tab === 'watchlist') this.renderWatchlist();
-    else if (this.state.tab === 'kanpan') this.renderKanpan();
 
     this.bindEvents();
   },
@@ -264,300 +190,6 @@ const News = {
     `;
   },
 
-  renderWatchlist() {
-    const el = document.getElementById('news-content');
-    const list = DB.get('news_watchlist', this.defaultWatchlist);
-    el.innerHTML = `
-      <div class="watchlist">
-        <div class="flex-between mb-12">
-          <div class="card-title" style="margin:0"><span class="card-title-ico">⭐</span>我的自选股</div>
-          <button class="btn-ghost btn-primary text-sm" id="add-stock">+ 添加</button>
-        </div>
-        ${list.length ? list.map((s, i) => `
-          <div class="watchlist-item slide-up" style="animation-delay:${i * 0.05}s">
-            <div class="watchlist-info">
-              <span class="watchlist-name">${Utils.esc(s.name)}</span>
-              <span class="watchlist-code">${Utils.esc(s.code)}</span>
-            </div>
-            <div class="watchlist-price">
-              <div style="font-size:14px;font-weight:600;color:var(--text-primary)">${s.price.toFixed(2)}</div>
-              <div class="${s.changePct >= 0 ? 'up' : 'down'}" style="font-size:11px;font-weight:500">
-                ${s.changePct >= 0 ? '+' : ''}${s.changePct.toFixed(2)}%
-              </div>
-            </div>
-            <button class="watchlist-remove" data-rm="${s.code}">×</button>
-          </div>
-        `).join('') : Components.empty({ icon: '⭐', title: '还没有自选股', sub: '添加你关注的股票，实时查看行情', hero: true })}
-      </div>
-
-      <div class="card mt-16">
-        <div class="card-title"><span class="card-title-ico">📈</span>指数行情</div>
-        <div class="market-strip">
-          ${Object.values(this.marketData()).map(m => `
-            <div class="market-cell">
-              <div class="market-name">${Utils.esc(m.name)}</div>
-              <div class="market-price">${m.price.toFixed(2)}</div>
-              <div class="market-chg ${m.changePct >= 0 ? 'up' : 'down'}">
-                ${m.changePct >= 0 ? '+' : ''}${m.changePct.toFixed(2)}%
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-    document.getElementById('add-stock')?.addEventListener('click', async () => {
-      const r = await Components.form({
-        title: '添加自选股',
-        fields: [
-          { key: 'code', label: '股票代码', placeholder: '600519', required: true },
-          { key: 'name', label: '股票名称', placeholder: '贵州茅台', required: true },
-          { key: 'price', label: '当前价', type: 'number', placeholder: '100.00', value: '100.00' },
-          { key: 'changePct', label: '涨跌幅 %', type: 'number', placeholder: '1.5', value: '0' },
-        ],
-        okText: '添加',
-      });
-      if (r && r.code) {
-        const list = DB.get('news_watchlist', []);
-        list.push({
-          code: r.code,
-          name: r.name,
-          price: parseFloat(r.price) || 0,
-          changePct: parseFloat(r.changePct) || 0,
-          change: (parseFloat(r.price) || 0) * (parseFloat(r.changePct) || 0) / 100,
-        });
-        DB.set('news_watchlist', list);
-        Utils.toast('已添加自选股');
-        this.mount(document.getElementById('app-main'));
-      }
-    });
-
-    el.querySelectorAll('[data-rm]').forEach(b => {
-      b.addEventListener('click', () => {
-        const code = b.dataset.rm;
-        const list = DB.get('news_watchlist', []);
-        DB.set('news_watchlist', list.filter(s => s.code !== code));
-        Utils.toast('已移除');
-        this.mount(document.getElementById('app-main'));
-      });
-    });
-  },
-
-  /* ============================================================
-     看盘模块（吴富贵风格）
-     ============================================================ */
-  renderKanpan() {
-    const el = document.getElementById('news-content');
-    const stocks = this.kanpanStocks();
-    const today = DB.todayKey();
-
-    // 4 格统计
-    const stats = {
-      up: stocks.filter(s => s.signalType === 'up').length,
-      down: stocks.filter(s => s.signalType === 'down').length,
-      hold: stocks.filter(s => s.signalType === 'hold' || s.signalType === 'wait').length,
-      captured: stocks.filter(s => s.captured).length,
-    };
-
-    // 过滤 + 搜索
-    let view = stocks;
-    if (this.state.kanpanTab === 'up') view = view.filter(s => s.signalType === 'up');
-    else if (this.state.kanpanTab === 'down') view = view.filter(s => s.signalType === 'down');
-    if (this.state.kanpanSearch) {
-      const q = this.state.kanpanSearch.toLowerCase();
-      view = view.filter(s => s.name.toLowerCase().includes(q) || s.code.includes(q));
-    }
-
-    el.innerHTML = `
-      <div class="kanpan-board">
-        <!-- 顶部：标题 + 三按钮 -->
-        <div class="kanpan-header">
-          <div class="kanpan-title">今日看盘</div>
-          <div class="kanpan-subtitle">短线选股看盘</div>
-          <div class="kanpan-meta">${stocks.length}只关注标的 · 挖战法自动筛选买卖信号</div>
-        </div>
-
-        <!-- 操作按钮组 -->
-        <div class="kanpan-actions">
-          <button class="kanpan-btn btn-capture" id="kanpan-action-capture">🔄 一键抓取</button>
-          <button class="kanpan-btn btn-add" id="kanpan-action-add">+ 添加股票</button>
-          <button class="kanpan-btn btn-shot" id="kanpan-action-shot">📷 截图</button>
-        </div>
-
-        <!-- 搜索框 -->
-        <div class="kanpan-search-box">
-          <span class="kanpan-search-ico">🔍</span>
-          <input class="kanpan-search-input" id="kanpan-search-input" placeholder="输入股票名称/代码查看K线，才能选龙头战法" />
-          <button class="kanpan-search-btn">搜索</button>
-        </div>
-
-        <!-- 4格统计 -->
-        <div class="kanpan-stats">
-          <div class="kanpan-stat stat-up">
-            <div class="kanpan-stat-label">今日上车 <span class="kanpan-stat-ico">📈</span></div>
-            <div class="kanpan-stat-num">${stats.up}</div>
-            <div class="kanpan-stat-sub">可买入/强信号</div>
-          </div>
-          <div class="kanpan-stat stat-down">
-            <div class="kanpan-stat-label">今日下车 <span class="kanpan-stat-ico">📉</span></div>
-            <div class="kanpan-stat-num">${stats.down}</div>
-            <div class="kanpan-stat-sub">考虑卖出/止盈</div>
-          </div>
-          <div class="kanpan-stat stat-hold">
-            <div class="kanpan-stat-label">持有观望 <span class="kanpan-stat-ico">⏸️</span></div>
-            <div class="kanpan-stat-num">${stats.hold}</div>
-            <div class="kanpan-stat-sub">未触发买卖信号</div>
-          </div>
-          <div class="kanpan-stat stat-captured">
-            <div class="kanpan-stat-label">已抓取 <span class="kanpan-stat-ico">✅</span></div>
-            <div class="kanpan-stat-num">${stats.captured}</div>
-            <div class="kanpan-stat-sub">/${stocks.length} 只</div>
-          </div>
-        </div>
-
-        <!-- 子 Tab -->
-        <div class="kanpan-tabs">
-          <div class="kanpan-tab ${this.state.kanpanTab === 'all' ? 'active' : ''}" data-ktab="all">
-            全部 ${stats.captured}
-          </div>
-          <div class="kanpan-tab ${this.state.kanpanTab === 'up' ? 'active' : ''}" data-ktab="up">
-            🚀 今日上车 ${stats.up}
-          </div>
-          <div class="kanpan-tab ${this.state.kanpanTab === 'down' ? 'active' : ''}" data-ktab="down">
-            🚙 今日下车 ${stats.down}
-          </div>
-        </div>
-
-        <!-- 排序表头 -->
-        <div class="kanpan-list-header">
-          <div class="kanpan-list-cell">股票</div>
-          <div class="kanpan-list-cell">信号强弱 ▼</div>
-          <div class="kanpan-list-cell">价/涨跌</div>
-        </div>
-
-        <!-- 股票列表 -->
-        <div class="kanpan-list" id="kanpan-list">
-          ${view.length ? view.map((s, i) => this.renderKanpanRow(s, i)).join('') : Components.empty({ icon: '📉', title: '暂无标的', sub: '请调整筛选条件或添加新股票', hero: true })}
-        </div>
-
-        <!-- 底部小红书号 -->
-        <div class="kanpan-footer">
-          <span class="xhs-hint">📕 小红书号：4062735900</span>
-        </div>
-      </div>
-    `;
-
-    // Tab 切换
-    el.querySelectorAll('[data-ktab]').forEach(t => {
-      t.addEventListener('click', () => {
-        this.state.kanpanTab = t.dataset.ktab;
-        this.renderKanpan();
-      });
-    });
-
-    // 搜索
-    const searchInput = el.querySelector('#kanpan-search-input');
-    if (searchInput) {
-      searchInput.value = this.state.kanpanSearch;
-      searchInput.addEventListener('input', Utils.debounce((e) => {
-        this.state.kanpanSearch = e.target.value;
-        this.renderKanpan();
-      }, 200));
-    }
-
-    // 操作按钮
-    document.getElementById('kanpan-action-capture')?.addEventListener('click', () => this.kanpanCapture());
-    document.getElementById('kanpan-action-add')?.addEventListener('click', () => this.kanpanAdd());
-    document.getElementById('kanpan-action-shot')?.addEventListener('click', () => this.kanpanScreenshot());
-  },
-
-  // 单只股票行
-  renderKanpanRow(s, i) {
-    const tierBadge = s.tier === 's' ? `<span class="kanpan-tier tier-s">S</span>` : s.tier === 'a' ? `<span class="kanpan-tier tier-a">A</span>` : '';
-    const tagBadges = [
-      s.signalType === 'up' ? `<span class="kanpan-tag tag-yf">龙头</span>` : '',
-      s.signalType === 'buy' ? `<span class="kanpan-tag tag-buy">突破</span>` : '',
-    ].join('');
-    return `
-      <div class="kanpan-row" data-stock="${s.code}">
-        <div class="kanpan-row-cell kanpan-row-name">
-          <div class="kanpan-cell-name">${tierBadge}${Utils.esc(s.name)}</div>
-          <div class="kanpan-cell-code">${Utils.esc(s.code)} · ${Utils.esc(s.sector)}</div>
-          <div class="kanpan-cell-tags">${tagBadges}</div>
-        </div>
-        <div class="kanpan-row-cell kanpan-row-signal">
-          <span class="kanpan-signal signal-${s.signalType}">${Utils.esc(s.signal)}</span>
-        </div>
-        <div class="kanpan-row-cell kanpan-row-price">
-          <div class="kanpan-price-num ${s.changePct >= 0 ? 'up' : 'down'}">¥${s.price.toFixed(2)}</div>
-          <div class="kanpan-price-chg ${s.changePct >= 0 ? 'up' : 'down'}">
-            ${s.changePct >= 0 ? '▲' : '▼'}${Math.abs(s.changePct).toFixed(2)}%
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  // 一键抓取（重新生成模拟信号）
-  kanpanCapture() {
-    DB.remove('kanpan_' + DB.todayKey());
-    Utils.toast('正在抓取 8 只关注标的最新信号...', 'info');
-    setTimeout(() => {
-      Utils.toast('✅ 抓取完成！已更新买卖信号', 'success');
-      Utils.burst(document.getElementById('kanpan-action-capture'), ['📈', '⚡', '🎯', '💰']);
-      this.mount(document.getElementById('app-main'));
-    }, 1200);
-  },
-
-  // 添加股票
-  async kanpanAdd() {
-    const r = await Components.form({
-      title: '添加关注股票',
-      fields: [
-        { key: 'code', label: '股票代码', placeholder: '600519', required: true },
-        { key: 'name', label: '股票名称', placeholder: '贵州茅台', required: true },
-        { key: 'price', label: '当前价', type: 'number', placeholder: '100.00', value: '100.00' },
-      ],
-      okText: '加入关注',
-    });
-    if (r && r.code && r.name) {
-      const list = DB.get('kanpan_user_added', []);
-      list.push({
-        code: r.code,
-        name: r.name,
-        price: parseFloat(r.price) || 0,
-        changePct: +(Math.random() * 6 - 2).toFixed(2),
-        sector: '自定义',
-        signalType: Math.random() > 0.5 ? 'up' : 'wait',
-        signal: Math.random() > 0.5 ? '今日上车' : '观察中',
-        captured: Math.random() > 0.5,
-      });
-      DB.set('kanpan_user_added', list);
-      Utils.toast('已加入关注 🎯', 'success');
-      this.mount(document.getElementById('app-main'));
-    }
-  },
-
-  // 截图（导出当前看盘页为 PNG，提醒浏览器限制）
-  kanpanScreenshot() {
-    Utils.toast('截图功能：请用系统截图（Win+Shift+S / Mac+Ctrl+Shift+4）截图当前看盘面板 📷', 'info');
-    Components.modal({
-      title: '📷 看盘截图',
-      body: `
-        <div class="text-sm text-secondary" style="line-height:1.7">
-          <p>由于浏览器安全限制，JavaScript 不能直接保存文件到硬盘。</p>
-          <p class="mt-8"><strong>系统自带截图方式：</strong></p>
-          <ul style="margin:8px 0 8px 20px">
-            <li>Windows：<code>Win + Shift + S</code></li>
-            <li>Mac：<code>⌘ + Ctrl + Shift + 4</code></li>
-            <li>手机：电源键 + 音量下</li>
-          </ul>
-          <p class="mt-8">截图后分享到小红书，搭配你的看盘日常 🌸</p>
-        </div>
-      `,
-    });
-  },
-
   bindEvents() {
     document.querySelectorAll('[data-ntab]').forEach(b => {
       b.addEventListener('click', () => {
@@ -570,10 +202,6 @@ const News = {
       Utils.toast('正在刷新数据...');
       DB.remove('market_' + DB.todayKey());
       setTimeout(() => this.mount(document.getElementById('app-main')), 600);
-    });
-
-    document.getElementById('kanpan-capture')?.addEventListener('click', () => {
-      this.kanpanCapture();
     });
 
     // 收藏

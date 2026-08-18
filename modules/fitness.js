@@ -190,9 +190,23 @@ const Fitness = {
   bindCloudBanner() {
     document.querySelectorAll('[data-cloud-act]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const app = window.App;
-        if (!app || !app.openCloudDialog) { Utils.toast('请稍后再试'); return; }
-        app.openCloudDialog();
+        // 兼容不同初始化时机：App 可能还没完全注册到 window 上，做 3 重兜底
+        const tryOpen = (retriesLeft) => {
+          const app = window.App;
+          if (app && typeof app.openCloudDialog === 'function') {
+            app.openCloudDialog();
+            return;
+          }
+          if (retriesLeft > 0) {
+            // 50ms 后重试，最多 10 次（约 500ms 内）
+            setTimeout(() => tryOpen(retriesLeft - 1), 50);
+          } else {
+            // 终极兜底：派发自定义事件，让 App.init() 监听器捕获
+            window.dispatchEvent(new CustomEvent('kitty:open-cloud-dialog'));
+            Utils.toast('正在准备登录窗口…', 'info');
+          }
+        };
+        tryOpen(10);
       });
     });
   },

@@ -14,6 +14,11 @@ const App = {
     this.setupShortcuts();
     this.setupCloudSync();
 
+    // 监听自定义事件（兜底：fitness 模块若在 window.App 暴露前就点击了云同步按钮）
+    window.addEventListener('kitty:open-cloud-dialog', () => {
+      this.openCloudDialog();
+    });
+
     // 默认页面
     this.go(this.currentPage);
 
@@ -30,6 +35,8 @@ const App = {
       News,
       App,
     };
+    // 暴露 App 全局引用，让其他模块（如 fitness 的云同步横幅卡按钮）可以调用其方法
+    window.App = this;
   },
 
   // 主题切换
