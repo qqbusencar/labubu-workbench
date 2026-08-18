@@ -8,6 +8,7 @@ const DB = {
   // 数据表
   keys: {
     fitness: 'fitness_records',
+    fitness_custom: 'fitness_custom_items',
     wellness: 'wellness_records',
     wellness_products: 'wellness_products',
     study_english: 'study_english_daily',
@@ -320,12 +321,15 @@ const DB = {
     try {
       const cloud = await SupabaseCfg.fetchAll();
       let merged = 0;
+      // 已知的静态 key + 动态 key 前缀（如 ios_health_2026-08-18）
+      const knownKeys = Object.values(this.keys);
+      const dynamicPrefixes = ['ios_health_'];
+      const isSyncable = (key) => knownKeys.includes(key) || dynamicPrefixes.some(p => key.startsWith(p));
       for (const [key, row] of Object.entries(cloud)) {
-        // 仅同步我们认识的 key
-        if (!Object.values(this.keys).includes(key)) continue;
+        if (!isSyncable(key)) continue;
         const local = this.get(key, null);
         const cloudTime = new Date(row.updated_at).getTime();
-        const localTime = local ? (this._lastLocalWriteTime[key] || 0) : 0;
+        const localTime = local ? (this._lastLocalWriteTime?.[key] || 0) : 0;
         // 简单的 last-write-wins：云端更新则覆盖本地
         if (!local || cloudTime >= localTime) {
           this.set(key, row.data);
@@ -351,11 +355,24 @@ const DB = {
     }
     this._setSyncStatus('syncing');
     let count = 0;
-    for (const k of Object.values(this.keys)) {
+    // 收集所有需要同步的 key：静态 keys + 动态 key（扫描 localStorage）+ 脏 key 队列
+    const keysToSync = new Set(Object.values(this.keys));
+    for (let i = 0; i < localStorage.length; i++) {
+      const fullKey = localStorage.key(i);
+      if (fullKey && fullKey.startsWith(this.PREFIX)) {
+        keysToSync.add(fullKey.slice(this.PREFIX.length));
+      }
+    }
+    // 也包含脏 key 队列中待推的 key
+    this._loadDirty().forEach(k => keysToSync.add(k));
+    for (const k of keysToSync) {
       const v = this.get(k);
       if (v === null || v === undefined) continue;
       const ok = await SupabaseCfg.pushKey(k, v);
-      if (ok) count++;
+      if (ok) {
+        count++;
+        this._clearDirty(k);
+      }
     }
     this._setSyncStatus('success');
     setTimeout(() => this._setSyncStatus('idle'), 2000);

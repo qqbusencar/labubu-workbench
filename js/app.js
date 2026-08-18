@@ -34,9 +34,13 @@ const App = {
 
   // 主题切换
   setupTheme() {
-    const apply = (theme) => {
+    const apply = (theme, persist = false) => {
       document.body.dataset.theme = theme;
-      DB.set('settings', { ...(DB.get('settings', {})), theme });
+      // 仅在用户主动切换时持久化，避免 init 时写入产生"近期本地写入"时间戳
+      // 导致 pullFromCloud 误判本地比云端新而跳过拉取
+      if (persist) {
+        DB.set('settings', { ...(DB.get('settings', {})), theme });
+      }
       document.querySelectorAll('[id$="-theme-toggle"]').forEach(b => {
         b.textContent = theme === 'dark' ? '☀️' : '🌗';
       });
@@ -46,10 +50,10 @@ const App = {
     apply(settings.theme || 'light');
 
     document.getElementById('mobile-theme-toggle')?.addEventListener('click', () => {
-      apply(document.body.dataset.theme === 'dark' ? 'light' : 'dark');
+      apply(document.body.dataset.theme === 'dark' ? 'light' : 'dark', true);
     });
     document.getElementById('pc-theme-toggle')?.addEventListener('click', () => {
-      apply(document.body.dataset.theme === 'dark' ? 'light' : 'dark');
+      apply(document.body.dataset.theme === 'dark' ? 'light' : 'dark', true);
     });
   },
 
@@ -308,7 +312,7 @@ const App = {
       Utils.toast('云同步诊断：' + SupabaseCfg.lastError, 'error');
     }
 
-    // 监听登录状态变化 → 同步状态徽章 + 登录后立刻补推本地数据
+    // 监听登录状态变化 → 同步状态徽章 + 登录后先拉云端再推本地（顺序执行，杜绝竞态）
     const refreshBadge = () => this.refreshSyncBadge();
     SupabaseCfg.onAuthChange((u) => {
       refreshBadge();
@@ -317,17 +321,18 @@ const App = {
         const modal = document.querySelector('.modal-backdrop');
         if (modal) modal.remove();
         Utils.toast('GitHub 登录成功 ✅ 正在同步数据...', 'success');
-        // 立即把本地数据推到云端
-        DB.pushAllToCloud().then((n) => {
-          if (n > 0) Utils.toast(`已同步 ${n} 项本地数据到云端 ☁️`, 'success');
-          this.refreshSyncBadge();
-        });
-        // 同时拉取云端数据到本地
+        // 关键：先拉取云端数据到本地，拉完后再推送本地数据
+        // 这样 iOS/新设备首次登录时，本地空数据不会先覆盖云端
         DB.pullFromCloud().then((merged) => {
           if (merged > 0) {
             Utils.toast(`已从云端恢复 ${merged} 项数据 💖`, 'success');
             this.go(this.currentPage);
           }
+          // 拉取完成后才推送本地数据（此时本地已含云端数据，推送不会覆盖）
+          DB.pushAllToCloud().then((n) => {
+            if (n > 0) Utils.toast(`已同步 ${n} 项本地数据到云端 ☁️`, 'success');
+            this.refreshSyncBadge();
+          });
         });
       }
     });
@@ -352,6 +357,13 @@ const App = {
 
     // 首次刷新状态徽章
     refreshBadge();
+
+    // 云同步已启用但未登录 → 提示用户登录可恢复云端数据（iOS/新设备首次打开时尤其重要）
+    if (SupabaseCfg.ENABLED && !SupabaseCfg.user) {
+      setTimeout(() => {
+        Utils.toast('☁️ 点击云同步登录，可恢复你的数据', 'info');
+      }, 1500);
+    }
   },
 
   // 刷新同步状态徽章
