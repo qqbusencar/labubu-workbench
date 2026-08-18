@@ -1,0 +1,30 @@
+name: Deploy to Surge
+
+# 每次推送到 main 分支，自动把最新代码部署到 kitty-wb.surge.sh
+# 需要先在 GitHub 仓库设置 Secrets：SURGE_TOKEN（见自动化指南）
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 允许在 GitHub 网页上手动点一下触发
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 没配置 SURGE_TOKEN 时自动跳过此步骤（不会报错变红）
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 部署到 Surge（自动）
+        if: ${{ secrets.SURGE_TOKEN != '' }}
+        run: npx --yes surge . publish --token "$SURGE_TOKEN"
+        env:
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
