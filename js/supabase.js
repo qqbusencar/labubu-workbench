@@ -156,6 +156,13 @@ const SupabaseCfg = {
         }
       }
 
+      // 诊断：如果 URL 有 OAuth 回调参数但会话未建立，记录原因
+      if (!this.user && (originalHash.includes('access_token') || originalSearch.includes('code=') || originalSearch.includes('error='))) {
+        if (!this.lastError) {
+          this.lastError = 'OAuth 回调已处理但会话未建立（hash=' + (originalHash ? '有' : '无') + ', search=' + originalSearch.slice(0, 50) + '）';
+        }
+      }
+
       console.info('[Supabase] 已连接:', this.URL, 'user:', this.user?.email || null);
       return true;
     } catch (e) {
