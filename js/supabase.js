@@ -52,6 +52,9 @@ const SupabaseCfg = {
   // 初始化（启动时调用）
   async init() {
     this.lastError = null;
+    // 保存原始 URL（SDK 可能修改它），用于手动解析 OAuth 回调
+    const originalHash = window.location.hash;
+    const originalSearch = window.location.search;
     // 优先使用本地保存的凭据（用户在弹窗中配置过）
     this._loadSavedConfig();
 
@@ -77,13 +80,13 @@ const SupabaseCfg = {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: true,   // 自动从回调 URL 的 #access_token（implicit）或 ?code 建立会话
-          flowType: 'implicit',       // 隐式流：会话直接随回调 URL 返回，不依赖本地 code_verifier，清缓存/iOS 更稳
+          detectSessionInUrl: false,  // 关闭自动检测：改为下方手动解析，消除异步时序竞态
+          flowType: 'implicit',       // 隐式流：会话直接随回调 URL 的 #access_token 返回
         },
       });
       this.ENABLED = true;
 
-      // 关键：先注册监听，再读会话，避免错过 SIGNED_IN 事件
+      // 先注册监听
       this.client.auth.onAuthStateChange((_event, session) => {
         this.user = session?.user || null;
         this._notify();
@@ -93,30 +96,64 @@ const SupabaseCfg = {
       const { data: { session } } = await this.client.auth.getSession();
       this.user = session?.user || null;
 
-      // 处理 OAuth 回调：GitHub 跳回带 ?code=... → 显式交换为会话（这是修复"登录后无状态"的核心）
-      const urlParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-      const code = urlParams.get('code') || hashParams.get('code');
-      if (code) {
-        try {
-          const { error } = await this.client.auth.exchangeCodeForSession(window.location.href);
-          if (error) {
-            this.lastError = 'OAuth 交换失败：' + (error.message || error);
-          } else {
-            const { data: { session: s2 } } = await this.client.auth.getSession();
-            this.user = s2?.user || null;
+      // 如果没有已有会话，手动检查 URL 中的 OAuth 回调
+      if (!this.user) {
+        // 1. implicit 流回调：#access_token=...&refresh_token=...
+        if (originalHash.includes('access_token')) {
+          const hp = new URLSearchParams(originalHash.replace(/^#/, ''));
+          const accessToken = hp.get('access_token');
+          const refreshToken = hp.get('refresh_token');
+          if (accessToken) {
+            console.info('[Supabase] 检测到 #access_token，正在建立会话...');
+            const { data, error } = await this.client.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken || '',
+            });
+            if (error) {
+              this.lastError = '会话建立失败：' + (error.message || error);
+              console.error('[Supabase] setSession error:', error);
+            } else {
+              this.user = data.user;
+              console.info('[Supabase] 会话建立成功！user:', this.user?.email);
+            }
           }
-        } catch (e) {
-          this.lastError = 'OAuth 交换异常：' + (e.message || e);
         }
-        this._cleanUrl();
-      }
 
-      // 若 URL 带 ?error（如 redirect_to 未配置 / 用户拒绝授权）→ 显式报错，不再静默
-      const errCode = urlParams.get('error') || hashParams.get('error');
-      if (errCode) {
-        this.lastError = 'OAuth 返回错误：' + (urlParams.get('error_description') || hashParams.get('error_description') || errCode);
-        this._cleanUrl();
+        // 2. PKCE 流回调兜底：?code=...
+        if (!this.user && originalSearch.includes('code=')) {
+          const sp = new URLSearchParams(originalSearch);
+          const code = sp.get('code');
+          if (code) {
+            console.info('[Supabase] 检测到 ?code，尝试交换会话...');
+            try {
+              const { error } = await this.client.auth.exchangeCodeForSession(
+                window.location.origin + window.location.pathname + originalSearch
+              );
+              if (error) {
+                this.lastError = 'OAuth 交换失败：' + (error.message || error);
+              } else {
+                const { data: { session: s2 } } = await this.client.auth.getSession();
+                this.user = s2?.user || null;
+              }
+            } catch (e) {
+              this.lastError = 'OAuth 交换异常：' + (e.message || e);
+            }
+          }
+        }
+
+        // 3. 错误回调：?error=...
+        if (!this.user) {
+          const sp = new URLSearchParams(originalSearch);
+          const errCode = sp.get('error');
+          if (errCode) {
+            this.lastError = 'OAuth 错误：' + (sp.get('error_description') || errCode);
+          }
+        }
+
+        // 清理 URL（无论成功失败都清理，避免刷新重复触发）
+        if (originalHash.includes('access_token') || originalSearch.includes('code=') || originalSearch.includes('error=')) {
+          this._cleanUrl();
+        }
       }
 
       console.info('[Supabase] 已连接:', this.URL, 'user:', this.user?.email || null);

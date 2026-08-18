@@ -312,12 +312,22 @@ const App = {
     const refreshBadge = () => this.refreshSyncBadge();
     SupabaseCfg.onAuthChange((u) => {
       refreshBadge();
-      // 关键修复：会话就绪（含 GitHub OAuth 重定向后）后立即把本地数据推到云端，
-      // 覆盖 init() 时 getSession 尚未拿到会话、导致启动全量推送被跳过的情况
       if (u) {
+        // 关闭可能已打开的登录弹窗（OAuth 回调后会话建立但弹窗仍显示"未登录"的时序竞态）
+        const modal = document.querySelector('.modal-backdrop');
+        if (modal) modal.remove();
+        Utils.toast('GitHub 登录成功 ✅ 正在同步数据...', 'success');
+        // 立即把本地数据推到云端
         DB.pushAllToCloud().then((n) => {
           if (n > 0) Utils.toast(`已同步 ${n} 项本地数据到云端 ☁️`, 'success');
           this.refreshSyncBadge();
+        });
+        // 同时拉取云端数据到本地
+        DB.pullFromCloud().then((merged) => {
+          if (merged > 0) {
+            Utils.toast(`已从云端恢复 ${merged} 项数据 💖`, 'success');
+            this.go(this.currentPage);
+          }
         });
       }
     });
