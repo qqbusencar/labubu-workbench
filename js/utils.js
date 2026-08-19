@@ -268,7 +268,7 @@ const Utils = {
   // ============================================================
   // 模块 → 场景映射
   KITTY_MODULES: {
-    fitness:  { main: 'blocks',       alt: 'blocks',       backup: 'airplane' },
+    fitness:  { main: 'bike',         alt: 'bike',         backup: 'scooter' },
     wellness: { main: 'tea',          alt: 'tea',          backup: 'cloud-sleep' },
     study:    { main: 'book',         alt: 'book',         backup: 'notebook' },
     fortune:  { main: 'star-sleep',   alt: 'star-sleep',   backup: 'snowglobe-pink' },

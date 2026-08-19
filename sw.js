@@ -1,7 +1,7 @@
 /* Hello Kitty 治愈工作台 — Service Worker
    离线优先缓存策略 + Kitty 立绘缓存 */
 
-const CACHE_NAME = 'kitty-wb-v2.6.0';
+const CACHE_NAME = 'kitty-wb-v2.7.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -24,13 +24,14 @@ const STATIC_ASSETS = [
   './assets/img/icon-192.png',
   './assets/img/icon-512.png',
   // Kitty 立绘（5 大模块主图，多尺寸）
-  './assets/img/kitty/kitty-blocks-tiny.png',
-  './assets/img/kitty/kitty-blocks-small.png',
-  './assets/img/kitty/kitty-blocks-thumb.png',
-  './assets/img/kitty/kitty-blocks-medium.png',
-  './assets/img/kitty/kitty-blocks-card.png',
-  './assets/img/kitty/kitty-blocks-header.png',
-  './assets/img/kitty/kitty-blocks-hero.webp',
+  './assets/img/kitty/kitty-bike-tiny.png',
+  './assets/img/kitty/kitty-bike-small.png',
+  './assets/img/kitty/kitty-bike-thumb.png',
+  './assets/img/kitty/kitty-bike-medium.png',
+  './assets/img/kitty/kitty-bike-card.png',
+  './assets/img/kitty/kitty-bike-header.png',
+  './assets/img/kitty/kitty-bike-hero.png',
+  './assets/img/kitty/kitty-bike-hero.webp',
   './assets/img/kitty/kitty-tea-tiny.png',
   './assets/img/kitty/kitty-tea-small.png',
   './assets/img/kitty/kitty-tea-thumb.png',

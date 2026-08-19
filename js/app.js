@@ -120,11 +120,6 @@ const App = {
     if (greet) greet.textContent = Utils.greeting();
     if (date) date.textContent = Utils.formatToday();
 
-    // 移动端独立云同步按钮（最显眼入口）— 直接打开登录弹窗
-    document.getElementById('mobile-cloud')?.addEventListener('click', () => {
-      this.openCloudDialog();
-    });
-
     // 导出按钮
     document.getElementById('pc-export')?.addEventListener('click', () => this.exportData());
     document.getElementById('mobile-more-menu')?.querySelector('[data-action="export"]')?.addEventListener('click', () => {

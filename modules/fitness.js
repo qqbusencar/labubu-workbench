@@ -55,8 +55,6 @@ const Fitness = {
           `
         })}
 
-        ${this._renderCloudBanner()}
-
         <div class="kitty-feature-card" style="margin-bottom:16px">
           <div class="kitty-portrait" style="background:linear-gradient(135deg,#c8e6c9,#b8d8e8)">${Utils.kittyImg({ size: 'small', module: 'fitness' })}</div>
           <div class="lfc-text">
@@ -134,6 +132,8 @@ const Fitness = {
         <div style="text-align:center;padding:16px;font-size:11px;color:var(--text-muted)">
           数据来源：iOS 健身 + 手动记录 · 已云端同步 🌸
         </div>
+
+        ${this._renderCloudBanner()}
       </div>
     `;
 
