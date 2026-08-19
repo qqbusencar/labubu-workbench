@@ -41,27 +41,25 @@ const App = {
 
   // 主题切换
   setupTheme() {
-    const apply = (theme, persist = false) => {
+    // 主题是本机偏好，单独存在 local_theme（不在云端 keys 中），
+    // 不会被云同步覆盖/污染，跨设备各自独立
+    const apply = (theme) => {
       document.body.dataset.theme = theme;
-      // 仅在用户主动切换时持久化，避免 init 时写入产生"近期本地写入"时间戳
-      // 导致 pullFromCloud 误判本地比云端新而跳过拉取
-      if (persist) {
-        DB.set('settings', { ...(DB.get('settings', {})), theme });
-      }
       document.querySelectorAll('[id$="-theme-toggle"]').forEach(b => {
         b.textContent = theme === 'dark' ? '☀️' : '🌗';
       });
     };
 
-    const settings = DB.get('settings', {});
-    apply(settings.theme || 'light');
+    const theme = DB.get('local_theme', null) || 'light';
+    apply(theme);
 
-    document.getElementById('mobile-theme-toggle')?.addEventListener('click', () => {
-      apply(document.body.dataset.theme === 'dark' ? 'light' : 'dark', true);
-    });
-    document.getElementById('pc-theme-toggle')?.addEventListener('click', () => {
-      apply(document.body.dataset.theme === 'dark' ? 'light' : 'dark', true);
-    });
+    const toggle = () => {
+      const next = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+      apply(next);
+      DB.set('local_theme', next);
+    };
+    document.getElementById('mobile-theme-toggle')?.addEventListener('click', toggle);
+    document.getElementById('pc-theme-toggle')?.addEventListener('click', toggle);
   },
 
   // 密码锁

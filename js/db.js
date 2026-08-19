@@ -24,6 +24,9 @@ const DB = {
     i18n: 'language_pref',
   },
 
+  // 本机偏好（不同步到云端，避免跨设备覆盖主题等个人设置）
+  LOCAL_ONLY_KEYS: new Set(['local_theme']),
+
   // 读取
   get(key, fallback = null) {
     try {
@@ -268,8 +271,12 @@ const DB = {
     if (keys.size === 0) { this._setSyncStatus('idle'); return; }
     let hasError = false;
     for (const k of keys) {
-      const value = this.get(k);
+      let value = this.get(k);
       if (value === null || value === undefined) { this._clearDirty(k); continue; }
+      if (k === 'settings' && value && typeof value === 'object') {
+        const { theme, ...rest } = value;
+        value = rest;
+      }
       const ok = await SupabaseCfg.pushKey(k, value);
       if (ok) {
         this._clearDirty(k);
@@ -301,10 +308,14 @@ const DB = {
     let pending = keys.size;
     let hasError = false;
     keys.forEach(async (k) => {
-      const value = this.get(k);
+      let value = this.get(k);
       if (value === null || value === undefined) {
         this._clearDirty(k);
       } else {
+        if (k === 'settings' && value && typeof value === 'object') {
+          const { theme, ...rest } = value;
+          value = rest;
+        }
         const ok = await SupabaseCfg.pushKey(k, value);
         if (ok) this._clearDirty(k);
         else { hasError = true; this._markDirty(k); }
@@ -356,18 +367,27 @@ const DB = {
     this._setSyncStatus('syncing');
     let count = 0;
     // 收集所有需要同步的 key：静态 keys + 动态 key（扫描 localStorage）+ 脏 key 队列
+    // 注意：LOCAL_ONLY_KEYS（local_theme 等本机偏好）不同步到云端，避免跨设备覆盖
     const keysToSync = new Set(Object.values(this.keys));
     for (let i = 0; i < localStorage.length; i++) {
       const fullKey = localStorage.key(i);
       if (fullKey && fullKey.startsWith(this.PREFIX)) {
-        keysToSync.add(fullKey.slice(this.PREFIX.length));
+        const k = fullKey.slice(this.PREFIX.length);
+        if (!this.LOCAL_ONLY_KEYS.has(k)) keysToSync.add(k);
       }
     }
     // 也包含脏 key 队列中待推的 key
-    this._loadDirty().forEach(k => keysToSync.add(k));
+    this._loadDirty().forEach(k => {
+      if (!this.LOCAL_ONLY_KEYS.has(k)) keysToSync.add(k);
+    });
     for (const k of keysToSync) {
-      const v = this.get(k);
+      let v = this.get(k);
       if (v === null || v === undefined) continue;
+      // settings 里的 theme 是本机偏好，推送时剥离防止跨设备覆盖
+      if (k === 'settings' && v && typeof v === 'object') {
+        const { theme, ...rest } = v;
+        v = rest;
+      }
       const ok = await SupabaseCfg.pushKey(k, v);
       if (ok) {
         count++;
