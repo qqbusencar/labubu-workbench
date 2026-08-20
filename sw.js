@@ -1,7 +1,7 @@
 /* Hello Kitty 治愈工作台 — Service Worker
    离线优先缓存策略 + Kitty 立绘缓存 */
 
-const CACHE_NAME = 'kitty-wb-v3.0.2';
+const CACHE_NAME = 'kitty-wb-v3.1.0';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -20,6 +20,7 @@ const STATIC_ASSETS = [
   './modules/study.js',
   './modules/fortune.js',
   './modules/news.js',
+  './modules/bookkeeping.js',
   // PWA 图标
   './assets/img/icon-192.png',
   './assets/img/icon-512.png',
@@ -48,6 +49,11 @@ const STATIC_ASSETS = [
   './assets/img/kitty/kitty-cart-small.png',
   './assets/img/kitty/kitty-cart-thumb.png',
   './assets/img/kitty/kitty-cart-medium.png',
+  './assets/img/kitty/kitty-bookkeeping-tiny.png',
+  './assets/img/kitty/kitty-bookkeeping-small.png',
+  './assets/img/kitty/kitty-bookkeeping-thumb.png',
+  './assets/img/kitty/kitty-bookkeeping-medium.png',
+  './assets/img/kitty/kitty-bookkeeping-card.png',
   // 通用 hero / 备用
   './assets/img/kitty/kitty-picnic-tiny.png',
   './assets/img/kitty/kitty-picnic-small.png',

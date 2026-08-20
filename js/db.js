@@ -18,6 +18,7 @@ const DB = {
     fortune_user: 'fortune_user',
     news_favorites: 'news_favorites',
     news_watchlist: 'news_watchlist',
+    bookkeeping: 'bookkeeping_records',
     settings: 'settings',
     sync_log: 'sync_log',
     password: 'app_password',

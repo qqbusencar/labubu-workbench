@@ -33,6 +33,7 @@ const App = {
       Study,
       Fortune,
       News,
+      Bookkeeping,
       App,
     };
     // 暴露 App 全局引用，让其他模块（如 fitness 的云同步横幅卡按钮）可以调用其方法
@@ -190,7 +191,7 @@ const App = {
       }
       // 数字键切换 tab
       if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.target.matches('input, textarea, select')) {
-        const map = { '1': 'fitness', '2': 'wellness', '3': 'study', '4': 'fortune', '5': 'news' };
+        const map = { '1': 'fitness', '2': 'wellness', '3': 'study', '4': 'fortune', '5': 'news', '6': 'bookkeeping' };
         if (map[e.key]) this.go(map[e.key]);
       }
     });
@@ -210,6 +211,7 @@ const App = {
       case 'study': Study.mount(main); break;
       case 'fortune': Fortune.mount(main); break;
       case 'news': News.mount(main); break;
+      case 'bookkeeping': Bookkeeping.mount(main); break;
     }
     // 更新 hash
     if (history.pushState) history.replaceState(null, '', '#' + page);

@@ -273,6 +273,7 @@ const Utils = {
     study:    { main: 'book',         alt: 'book',         backup: 'notebook' },
     fortune:  { main: 'star-sleep',   alt: 'star-sleep',   backup: 'snowglobe-pink' },
     news:     { main: 'cart',         alt: 'cart',         backup: 'bag-pink' },
+    bookkeeping: { main: 'bookkeeping', alt: 'bookkeeping', backup: 'bookkeeping' },
     default:  { main: 'picnic',       alt: 'picnic',       backup: 'bag-pink' },
   },
 

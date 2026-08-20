@@ -185,6 +185,7 @@ const Components = {
       study: { ico: '📚', label: '学习收获' },
       fortune: { ico: '🌙', label: '每日运势' },
       news: { ico: '📰', label: '信息资讯' },
+      bookkeeping: { ico: '💰', label: '每日记账' },
     };
     const meta = iconMap[module] || {};
     return `
